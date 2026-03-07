@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Plus, Search, Filter, Download, Eye, Edit, Check } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 import { usePermissions } from '@/hooks/usePermissions';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -131,10 +132,41 @@ export const ReceiptsPage: React.FC = () => {
                             <Edit className="w-4 h-4" />
                           </Button>
                         )}
-                        {canApprove('receipts') && receipt.approvalRequired && !receipt.approvedBy && (
-                          <Button variant="ghost" size="sm">
-                            <Check className="w-4 h-4" />
-                          </Button>
+                        {canApprove('RECEIPT') && receipt.status === 'PENDING' && (
+                          <>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-green-600 hover:text-green-700"
+                              onClick={async () => {
+                                try {
+                                  await apiService.approveReceipt(receipt.id);
+                                  toast.success('Receipt approved');
+                                  window.location.reload();
+                                } catch (error) {
+                                  toast.error('Failed to approve');
+                                }
+                              }}
+                            >
+                              <Check className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-red-600 hover:text-red-700"
+                              onClick={async () => {
+                                try {
+                                  await apiService.rejectReceipt(receipt.id);
+                                  toast.success('Receipt rejected');
+                                  window.location.reload();
+                                } catch (error) {
+                                  toast.error('Failed to reject');
+                                }
+                              }}
+                            >
+                              X
+                            </Button>
+                          </>
                         )}
                       </div>
                     </td>

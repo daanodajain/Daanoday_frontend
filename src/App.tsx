@@ -4,6 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { Layout } from '@/components/layout/Layout';
 import { LoginPage } from '@/pages/auth/LoginPage';
+import { CustomerLoginPage } from '@/pages/customer-portal/CustomerLoginPage';
+import { CustomerDashboard } from '@/pages/customer-portal/CustomerDashboard';
 import { DashboardPage } from '@/pages/dashboard/DashboardPage';
 import { StoresPage } from '@/pages/stores/StoresPage';
 import { CustomersPage } from '@/pages/customers/CustomersPage';
@@ -18,6 +20,7 @@ import { ReportsPage } from '@/pages/reports/ReportsPage';
 import { NotificationsPage } from '@/pages/notifications/NotificationsPage';
 import { NewsPage } from '@/pages/news/NewsPage';
 import { SettingsPage } from '@/pages/settings/SettingsPage';
+import { AuditLogsPage } from '@/pages/audit/AuditLogsPage';
 import { useAuthStore } from '@/store/authStore';
 import { useSessionTimeout } from '@/hooks/useSessionTimeout';
 import { SessionTimeoutModal } from '@/components/session/SessionTimeoutModal';
@@ -86,6 +89,22 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
+        path="/customer/login"
+        element={
+          <PublicRoute>
+            <CustomerLoginPage />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/customer/dashboard"
+        element={
+          <ProtectedRoute>
+            <CustomerDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/"
         element={
           <ProtectedRoute>
@@ -108,6 +127,7 @@ const AppRoutes: React.FC = () => {
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="news" element={<NewsPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="audit" element={<AuditLogsPage />} />
       </Route>
     </Routes>
   );

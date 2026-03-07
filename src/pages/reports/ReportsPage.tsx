@@ -16,22 +16,29 @@ export const ReportsPage: React.FC = () => {
   const [isExporting, setIsExporting] = useState(false);
 
   const handleExport = async (type: string) => {
+    if (!startDate || !endDate) {
+      toast.error('Please select date range');
+      return;
+    }
+    
     try {
       setIsExporting(true);
-      const filters = {
-        startDate,
-        endDate,
-      };
       
-      const blob = await apiService.exportData(type, filters);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${type}-report-${new Date().toISOString().split('T')[0]}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      if (type === 'receipts') {
+        await apiService.exportReceiptsToExcel(startDate, endDate);
+      } else if (type === 'financial') {
+        await apiService.exportFinancialReport(startDate, endDate);
+      } else {
+        const blob = await apiService.exportData(type, { startDate, endDate });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${type}-report-${new Date().toISOString().split('T')[0]}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
       
       toast.success('Report exported successfully');
     } catch (error) {

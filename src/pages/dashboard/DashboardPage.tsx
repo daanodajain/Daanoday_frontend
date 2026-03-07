@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { 
@@ -12,8 +12,10 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 import { apiService } from '@/services/api';
 import { useAuthStore } from '@/store/authStore';
+import toast from 'react-hot-toast';
 
 interface DashboardStats {
   totalUsers: number;
@@ -29,12 +31,63 @@ interface DashboardStats {
 export const DashboardPage: React.FC = () => {
   const { t } = useTranslation();
   const { currentStore } = useAuthStore();
+  const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
+  const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ['dashboard-stats', currentStore?.id],
     queryFn: () => apiService.getDashboardStats(),
     enabled: !!currentStore,
   });
+
+  useEffect(() => {
+    if (currentStore) {
+      loadPendingApprovals();
+      loadRecentTransactions();
+    }
+  }, [currentStore]);
+
+  const loadPendingApprovals = async () => {
+    try {
+      const response = await apiService.getPendingApprovals();
+      if (response.DDMS_status === 'success') {
+        setPendingApprovals(response.DDMS_data || []);
+      }
+    } catch (error) {
+      console.error('Failed to load pending approvals');
+    }
+  };
+
+  const loadRecentTransactions = async () => {
+    try {
+      const response = await apiService.getRecentTransactions(5);
+      if (response.DDMS_status === 'success') {
+        setRecentTransactions(response.DDMS_data || []);
+      }
+    } catch (error) {
+      console.error('Failed to load recent transactions');
+    }
+  };
+
+  const handleApprove = async (receiptId: string) => {
+    try {
+      await apiService.approveReceipt(receiptId);
+      toast.success('Receipt approved successfully');
+      loadPendingApprovals();
+    } catch (error) {
+      toast.error('Failed to approve receipt');
+    }
+  };
+
+  const handleReject = async (receiptId: string) => {
+    try {
+      await apiService.rejectReceipt(receiptId);
+      toast.success('Receipt rejected');
+      loadPendingApprovals();
+    } catch (error) {
+      toast.error('Failed to reject receipt');
+    }
+  };
 
   const statsCards = [
     {
@@ -81,7 +134,7 @@ export const DashboardPage: React.FC = () => {
     },
     {
       title: 'Pending Approvals',
-      value: stats?.DDMS_data?.pendingApprovals || 0,
+      value: pendingApprovals.length,
       icon: AlertCircle,
       color: 'text-red-600',
       bgColor: 'bg-red-100',
@@ -160,40 +213,48 @@ export const DashboardPage: React.FC = () => {
           </CardHeader>
           <div className="p-6 pt-0">
             <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center justify-between py-2 border-b border-secondary-100 last:border-0">
-                  <div>
-                    <p className="font-medium text-secondary-900">Receipt #{1000 + i}</p>
-                    <p className="text-sm text-secondary-600">Customer Name</p>
+              {recentTransactions.length > 0 ? (
+                recentTransactions.map((receipt) => (
+                  <div key={receipt.id} className="flex items-center justify-between py-2 border-b border-secondary-100 last:border-0">
+                    <div>
+                      <p className="font-medium text-secondary-900">{receipt.receiptNumber}</p>
+                      <p className="text-sm text-secondary-600">{receipt.customerName}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium text-secondary-900">₹{receipt.totalAmount?.toLocaleString()}</p>
+                      <p className="text-sm text-green-600">{receipt.status}</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium text-secondary-900">₹{(i * 500).toLocaleString()}</p>
-                    <p className="text-sm text-green-600">Paid</p>
-                  </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-sm text-secondary-500 text-center py-4">No recent receipts</p>
+              )}
             </div>
           </div>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Pending Approvals</CardTitle>
+            <CardTitle>Pending Approvals ({pendingApprovals.length})</CardTitle>
           </CardHeader>
           <div className="p-6 pt-0">
             <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center justify-between py-2 border-b border-secondary-100 last:border-0">
-                  <div>
-                    <p className="font-medium text-secondary-900">Receipt #{2000 + i}</p>
-                    <p className="text-sm text-secondary-600">Awaiting approval</p>
+              {pendingApprovals.length > 0 ? (
+                pendingApprovals.map((receipt) => (
+                  <div key={receipt.id} className="flex items-center justify-between py-2 border-b border-secondary-100 last:border-0">
+                    <div className="flex-1">
+                      <p className="font-medium text-secondary-900">{receipt.receiptNumber}</p>
+                      <p className="text-sm text-secondary-600">₹{receipt.totalAmount?.toLocaleString()}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={() => handleApprove(receipt.id)}>Approve</Button>
+                      <Button size="sm" variant="outline" onClick={() => handleReject(receipt.id)}>Reject</Button>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium text-secondary-900">₹{(i * 750).toLocaleString()}</p>
-                    <p className="text-sm text-orange-600">Pending</p>
-                  </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-sm text-secondary-500 text-center py-4">No pending approvals</p>
+              )}
             </div>
           </div>
         </Card>

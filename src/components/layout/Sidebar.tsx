@@ -16,7 +16,8 @@ import {
   Newspaper,
   Shield,
   Settings,
-  LogOut
+  LogOut,
+  History
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { clsx } from 'clsx';
@@ -35,6 +36,7 @@ const navigationItems = [
   { key: 'reports', icon: BarChart3, path: '/reports' },
   { key: 'notifications', icon: Bell, path: '/notifications' },
   { key: 'news', icon: Newspaper, path: '/news' },
+  { key: 'audit', icon: History, path: '/audit' },
 ];
 
 interface SidebarProps {

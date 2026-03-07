@@ -381,6 +381,277 @@ class ApiService {
     return response.data;
   }
 
+  // Payment Gateway
+  async initiatePayment(receiptId: string, amount: number) {
+    return await this.post('/payments/create-order', { receiptId, amount });
+  }
+
+  async verifyPayment(paymentId: string, orderId: string, signature: string, receiptId: string) {
+    return await this.post('/payments/verify', { paymentId, orderId, signature, receiptId });
+  }
+
+  async refundPayment(paymentId: string, receiptId: string) {
+    return await this.post('/payments/refund', { paymentId, receiptId });
+  }
+
+  async getPaymentDetails(paymentId: string) {
+    return await this.get(`/payments/details/${paymentId}`);
+  }
+
+  // Receipt Approval
+  async rejectReceipt(receiptId: string) {
+    return await this.post(`/receipts/${receiptId}/reject`);
+  }
+
+  async getPendingApprovals() {
+    return await this.get('/dashboard/pending-approvals');
+  }
+
+  // Advanced Reports
+  async getReceiptReport(startDate: string, endDate: string, customerId?: string, paymentMode?: string) {
+    return await this.get('/reports/receipts', { params: { startDate, endDate, customerId, paymentMode } });
+  }
+
+  async getFinancialReport(startDate: string, endDate: string) {
+    return await this.get('/reports/financial', { params: { startDate, endDate } });
+  }
+
+  async getCustomerDonationHistory(customerId: string) {
+    return await this.get(`/reports/customer-history/${customerId}`);
+  }
+
+  async exportReceiptsToExcel(startDate: string, endDate: string) {
+    const response = await this.api.get('/reports/export/receipts/excel', {
+      params: { startDate, endDate },
+      responseType: 'blob'
+    });
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `receipts_${Date.now()}.xlsx`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+
+  async exportReceiptsToTally(startDate: string, endDate: string) {
+    const response = await this.api.get('/reports/export/receipts/tally', {
+      params: { startDate, endDate },
+      responseType: 'blob'
+    });
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `receipts_tally_${Date.now()}.xml`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+
+  async exportFinancialReport(startDate: string, endDate: string) {
+    const response = await this.api.get('/reports/export/financial/excel', {
+      params: { startDate, endDate },
+      responseType: 'blob'
+    });
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `financial_report_${Date.now()}.xlsx`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+
+  // Store Settings
+  async getStoreSettings() {
+    return await this.get('/store-settings');
+  }
+
+  async updateStoreSettings(settings: any) {
+    return await this.put('/store-settings', settings);
+  }
+
+  async updatePaymentGatewaySettings(settings: any) {
+    return await this.put('/store-settings/payment-gateway', settings);
+  }
+
+  async updateSmsSettings(settings: any) {
+    return await this.put('/store-settings/sms-settings', settings);
+  }
+
+  async updateEmailSettings(settings: any) {
+    return await this.put('/store-settings/email-settings', settings);
+  }
+
+  // Audit Logs
+  async getAuditLogs(filters?: any) {
+    return await this.get('/audit/logs', { params: filters });
+  }
+
+  async getEntityAuditHistory(entityName: string, entityId: string) {
+    return await this.get(`/audit/entity/${entityName}/${entityId}`);
+  }
+
+  // Customer Portal
+  async customerSendOTP(mobile: string) {
+    return await this.post('/customer-auth/send-otp', { mobile });
+  }
+
+  async customerLogin(mobile: string, password?: string, otp?: string) {
+    return await this.post('/customer-auth/login', { mobile, password, otp });
+  }
+
+  async getCustomerProfile() {
+    return await this.get('/customer-profile');
+  }
+
+  async updateCustomerProfile(data: any) {
+    return await this.put('/customer-profile', data);
+  }
+
+  async getCustomerReceipts() {
+    return await this.get('/customer-profile/receipts');
+  }
+
+  async getCustomerStats() {
+    return await this.get('/customer-profile/stats');
+  }
+
+  // Super Admin
+  async getSuperAdminSubscriptions() {
+    return await this.get('/super-admin/subscriptions');
+  }
+
+  async renewSubscription(subscriptionId: string) {
+    return await this.post(`/super-admin/subscriptions/${subscriptionId}/renew`);
+  }
+
+  async cancelSubscription(subscriptionId: string) {
+    return await this.post(`/super-admin/subscriptions/${subscriptionId}/cancel`);
+  }
+
+  async updateSubscription(subscriptionId: string, data: any) {
+    return await this.put(`/super-admin/subscriptions/${subscriptionId}`, data);
+  }
+
+  async getSystemSettings() {
+    return await this.get('/super-admin/system-settings');
+  }
+
+  async updateSystemSetting(key: string, value: any) {
+    return await this.put(`/super-admin/system-settings/${key}`, { value });
+  }
+
+  async getAllStoresForSuperAdmin() {
+    return await this.get('/super-admin/stores');
+  }
+
+  // Dashboard Analytics
+  async getDashboardRevenue(days: number = 30) {
+    return await this.get('/dashboard/revenue', { params: { days } });
+  }
+
+  async getReceiptTypeDistribution() {
+    return await this.get('/dashboard/distribution/receipt-types');
+  }
+
+  async getPaymentModeDistribution() {
+    return await this.get('/dashboard/distribution/payment-modes');
+  }
+
+  async getRecentTransactions(limit: number = 10) {
+    return await this.get('/dashboard/recent', { params: { limit } });
+  }
+
+  async getCustomerGrowth(months: number = 12) {
+    return await this.get('/dashboard/growth/customers', { params: { months } });
+  }
+
+  async getDailyTrend(days: number = 30) {
+    return await this.get('/dashboard/trend/daily', { params: { days } });
+  }
+
+  async getYearlyComparison() {
+    return await this.get('/dashboard/comparison/yearly');
+  }
+
+  // Role Management
+  async getRoles() {
+    return await this.get('/roles');
+  }
+
+  async getRole(roleId: string) {
+    return await this.get(`/roles/${roleId}`);
+  }
+
+  async createRole(roleData: any) {
+    return await this.post('/roles', roleData);
+  }
+
+  async updateRole(roleId: string, roleData: any) {
+    return await this.put(`/roles/${roleId}`, roleData);
+  }
+
+  async deleteRole(roleId: string) {
+    return await this.delete(`/roles/${roleId}`);
+  }
+
+  async getAllPermissions() {
+    return await this.get('/roles/permissions');
+  }
+
+  async assignPermissionsToRole(roleId: string, permissionIds: string[]) {
+    return await this.post(`/roles/${roleId}/permissions`, { permissionIds });
+  }
+
+  async assignRolesToUser(userId: string, roleIds: string[]) {
+    return await this.post(`/roles/users/${userId}/roles`, { roleIds });
+  }
+
+  async getUserRoles(userId: string) {
+    return await this.get(`/roles/users/${userId}`);
+  }
+
+  // Notification System
+  async createNotification(notificationData: any) {
+    return await this.post('/notifications', notificationData);
+  }
+
+  async deleteNotification(notificationId: string) {
+    return await this.delete(`/notifications/${notificationId}`);
+  }
+
+  async markAllNotificationsRead() {
+    return await this.put('/notifications/mark-all-read');
+  }
+
+  async getUnreadNotificationCount() {
+    return await this.get('/notifications/unread-count');
+  }
+
+  // User Profile
+  async getUserProfile() {
+    return await this.get('/user-profile');
+  }
+
+  async updateUserProfile(profileData: any) {
+    return await this.put('/user-profile', profileData);
+  }
+
+  async changePassword(oldPassword: string, newPassword: string) {
+    return await this.post('/user-profile/change-password', { oldPassword, newPassword });
+  }
+
+  // Store Context
+  async switchStore(storeId: string) {
+    return await this.post(`/store-context/switch/${storeId}`);
+  }
+
+  // Challan Approval
+  async rejectChallan(challanId: string) {
+    return await this.post(`/challans/${challanId}/reject`);
+  }
+
   // Generic HTTP methods
   async get<T = any>(url: string, config?: any) {
     const response = await this.api.get<T>(url, config);
