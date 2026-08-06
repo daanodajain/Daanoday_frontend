@@ -103,12 +103,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                         onClick={() => handleStoreChange(store)}
                         className="block w-full text-left px-4 py-2 text-sm text-secondary-700 hover:bg-secondary-100"
                       >
-                        <div>
-                          <p className="font-medium">{store.name}</p>
-                          <p className="text-xs text-secondary-500">
-                            {store.city}, {store.state}
-                          </p>
-                        </div>
+                        <p className="font-medium">{store.name}</p>
                       </button>
                     ))}
                   </div>

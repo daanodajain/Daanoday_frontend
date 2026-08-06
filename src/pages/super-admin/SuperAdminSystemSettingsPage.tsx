@@ -27,7 +27,7 @@ export const SuperAdminSystemSettingsPage: React.FC = () => {
   const [selectedSetting, setSelectedSetting] = useState<SystemSetting | null>(null);
   const [activeCategory, setActiveCategory] = useState('PAYMENT');
 
-  const isSuperAdmin = user?.roles?.some(role => role.roleName === 'SUPER_ADMIN');
+  const isSuperAdmin = user?.roles?.some(role => role.name === 'SUPER_ADMIN');
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ['system-settings'],

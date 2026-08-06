@@ -1,7 +1,6 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { useAuthStore } from '@/store/authStore';
 import { DDMSResponse } from '@/types';
-import toast from 'react-hot-toast';
 
 class ApiService {
   private api: AxiosInstance;
@@ -41,87 +40,44 @@ class ApiService {
     // Response interceptor
     this.api.interceptors.response.use(
       (response: AxiosResponse<DDMSResponse>) => {
-        const { DDMS_status, DDMS_login_status, DDMS_error_code } = response.data;
-
-        // Don't process authentication responses for public endpoints
-        const authEndpoints = ['/auth/send-otp', '/auth/login', '/auth/refresh', '/auth/logout'];
-        const isAuthEndpoint = authEndpoints.some(endpoint => response.config.url?.includes(endpoint));
-
-        // For auth endpoints, just return the response
-        if (isAuthEndpoint) {
-          return response;
+        if (response.data?.status === 'ERROR') {
+          return Promise.reject(new Error(response.data.DDMS_error_code || 'An error occurred'));
         }
-
-        // Handle authentication status - but only for success responses (not 401)
-        // 401 errors are handled in the error handler below
-        if (response.status !== 401 && (DDMS_login_status === 'unauthenticated' || DDMS_login_status === 'expired')) {
-          // Call logout action to properly clear state through persist middleware
-          useAuthStore.getState().logout();
-          return Promise.reject(new Error('Authentication required'));
-        }
-
-        // Handle error status
-        if (DDMS_status === 'error') {
-          const errorMessage = DDMS_error_code || 'An error occurred';
-          return Promise.reject(new Error(errorMessage));
-        }
-
         return response;
       },
       async (error) => {
-        // If it's a refresh request that failed
-        if (error.config?.url?.includes('/auth/refresh')) {
-          useAuthStore.getState().logout();
-          return Promise.reject(new Error('Session expired. Please login again.'));
-        }
-
-        // If already retried, logout
-        if (error.config?._retry) {
+        if (error.config?.url?.includes('/auth/refresh') || error.config?._retry) {
           useAuthStore.getState().logout();
           return Promise.reject(new Error('Session expired. Please login again.'));
         }
 
         if (error.response?.status === 401) {
-          // Check if we have a refresh token
           const { refreshToken, isAuthenticated } = useAuthStore.getState();
-
           if (!isAuthenticated || !refreshToken) {
             useAuthStore.getState().logout();
-            return Promise.reject(new Error('Authentication required'));
+            return Promise.reject(error);
           }
-
-          // Mark this request as a retry
           error.config._retry = true;
-
           try {
-            // Attempt to refresh the token using raw axios to bypass interceptors
-            const response = await axios.post<DDMSResponse>(
-              `${import.meta.env.VITE_API_BASE_URL}/auth/refresh`,
+            const res = await axios.post<DDMSResponse>(
+              `${import.meta.env.VITE_API_BASE_URL || 'https://backend-production-a53c.up.railway.app'}/auth/refresh`,
               { refreshToken },
               { headers: { 'Content-Type': 'application/json' } }
             );
-
-            if (response.data.DDMS_status === 'success' && response.data.DDMS_data) {
-              const { token: newToken, refreshToken: newRefreshToken } = response.data.DDMS_data;
-
-              // Update tokens in store
+            if (res.data?.status === 'SUCCESS' && res.data.DDMS_data) {
+              const { token: newToken, refreshToken: newRefreshToken } = res.data.DDMS_data;
               const { user } = useAuthStore.getState();
               if (user && newToken) {
                 useAuthStore.getState().setAuth(user, newToken, newRefreshToken || refreshToken);
-
-                // Retry the original request with new token
                 return this.api.request(error.config);
               }
             }
-
-            throw new Error('Token refresh failed');
-          } catch (refreshError) {
-            console.error('Token refresh failed:', refreshError);
+            throw new Error('Refresh failed');
+          } catch {
             useAuthStore.getState().logout();
-            return Promise.reject(new Error('Session expired. Please login again.'));
+            return Promise.reject(error);
           }
         }
-
         return Promise.reject(error);
       }
     );
@@ -280,8 +236,22 @@ class ApiService {
   }
 
   async updateReceipt(receiptId: string, receiptData: any) {
-    const response = await this.api.put<DDMSResponse>(`/receipts/${receiptId}`, receiptData);
-    return response.data;
+    // Direct update not allowed — must use change request
+    return await this.post('/change-requests', {
+      entityType: 'RECEIPT',
+      entityId: receiptId,
+      action: 'UPDATE',
+      ...receiptData,
+    });
+  }
+
+  async deleteReceipt(receiptId: string, reason: string) {
+    return await this.post('/change-requests', {
+      entityType: 'RECEIPT',
+      entityId: receiptId,
+      action: 'DELETE',
+      reason,
+    });
   }
 
   async approveReceipt(receiptId: string) {
@@ -308,13 +278,21 @@ class ApiService {
   }
 
   async updateChallan(challanId: string, challanData: any) {
-    const response = await this.api.put<DDMSResponse>(`/challans/${challanId}`, challanData);
-    return response.data;
+    return await this.post('/change-requests', {
+      entityType: 'CHALLAN',
+      entityId: challanId,
+      action: 'UPDATE',
+      ...challanData,
+    });
   }
 
-  async approveChallan(challanId: string) {
-    const response = await this.api.post<DDMSResponse>(`/challans/${challanId}/approve`);
-    return response.data;
+  async deleteChallan(challanId: string, reason: string) {
+    return await this.post('/change-requests', {
+      entityType: 'CHALLAN',
+      entityId: challanId,
+      action: 'DELETE',
+      reason,
+    });
   }
 
   // Transaction Management
@@ -323,7 +301,45 @@ class ApiService {
     return response.data;
   }
 
-  // Reports
+  // Change Requests
+  async getChangeRequests(filters?: any) {
+    return await this.get('/change-requests', { params: filters });
+  }
+
+  async createChangeRequest(data: { entityType: string; entityId: string; action: string; reason: string; newData?: any }) {
+    return await this.post('/change-requests', data);
+  }
+
+  async approveChangeRequest(id: string, reviewNote?: string) {
+    return await this.post(`/change-requests/${id}/approve`, { reviewNote });
+  }
+
+  async rejectChangeRequest(id: string, reviewNote: string) {
+    return await this.post(`/change-requests/${id}/reject`, { reviewNote });
+  }
+
+  // Audit Logs
+  async getAuditLogs(filters?: any) {
+    return await this.get('/audit-logs', { params: filters });
+  }
+
+  // Dashboard
+  async getDashboardRevenue(days: number = 30) {
+    return await this.get('/dashboard/revenue', { params: { days } });
+  }
+
+  async getPaymentModeDistribution() {
+    return await this.get('/dashboard/payment-modes');
+  }
+
+  async getMonthlyStats() {
+    return await this.get('/dashboard/monthly');
+  }
+
+  async getRecentReceipts(limit: number = 10) {
+    return await this.get('/dashboard/recent-receipts', { params: { limit } });
+  }
+
   async exportData(type: string, filters?: any) {
     const response = await this.api.get(`/reports/export/${type}`, {
       params: filters,
@@ -349,15 +365,23 @@ class ApiService {
     return response.data;
   }
 
-  // Notifications
+  // Notifications — correct backend endpoints
   async getNotifications() {
     const response = await this.api.get<DDMSResponse>('/notifications');
     return response.data;
   }
 
   async markNotificationRead(notificationId: string) {
-    const response = await this.api.put<DDMSResponse>(`/notifications/${notificationId}/read`);
+    const response = await this.api.patch<DDMSResponse>(`/notifications/${notificationId}/read`);
     return response.data;
+  }
+
+  async markAllNotificationsRead() {
+    return await this.patch('/notifications/mark-all-read');
+  }
+
+  async deleteNotification(notificationId: string) {
+    return await this.delete(`/notifications/${notificationId}`);
   }
 
   // News & Events
@@ -483,11 +507,7 @@ class ApiService {
     return await this.put('/store-settings/email-settings', settings);
   }
 
-  // Audit Logs
-  async getAuditLogs(filters?: any) {
-    return await this.get('/audit/logs', { params: filters });
-  }
-
+  // Audit Logs (old duplicate removed — use getAuditLogs above)
   async getEntityAuditHistory(entityName: string, entityId: string) {
     return await this.get(`/audit/entity/${entityName}/${entityId}`);
   }
@@ -517,50 +537,50 @@ class ApiService {
     return await this.get('/customer-profile/stats');
   }
 
-  // Super Admin
+  // Super Admin — correct endpoints matching backend routes
   async getSuperAdminSubscriptions() {
     return await this.get('/super-admin/subscriptions');
   }
 
-  async renewSubscription(subscriptionId: string) {
-    return await this.post(`/super-admin/subscriptions/${subscriptionId}/renew`);
+  async upsertSubscription(storeId: string, data: any) {
+    return await this.post(`/super-admin/subscriptions/${storeId}`, data);
   }
 
-  async cancelSubscription(subscriptionId: string) {
-    return await this.post(`/super-admin/subscriptions/${subscriptionId}/cancel`);
+  async extendSubscription(storeId: string, months: number) {
+    return await this.post(`/super-admin/subscriptions/${storeId}/extend`, { months });
   }
 
-  async updateSubscription(subscriptionId: string, data: any) {
-    return await this.put(`/super-admin/subscriptions/${subscriptionId}`, data);
+  async suspendSubscription(storeId: string) {
+    return await this.post(`/super-admin/subscriptions/${storeId}/suspend`);
   }
 
   async getSystemSettings() {
     return await this.get('/super-admin/system-settings');
   }
 
-  async updateSystemSetting(key: string, value: any) {
-    return await this.put(`/super-admin/system-settings/${key}`, { value });
+  async upsertSystemSetting(key: string, value: any) {
+    return await this.post('/super-admin/system-settings', { key, value });
   }
 
   async getAllStoresForSuperAdmin() {
     return await this.get('/super-admin/stores');
   }
 
-  // Dashboard Analytics
-  async getDashboardRevenue(days: number = 30) {
-    return await this.get('/dashboard/revenue', { params: { days } });
+  async createStoreWithAdminSuperAdmin(data: any) {
+    return await this.post('/super-admin/stores', data);
   }
 
+  async deleteStoreSuperAdmin(storeId: string) {
+    return await this.delete(`/super-admin/stores/${storeId}`);
+  }
+
+  // Dashboard Analytics (old duplicates removed — canonical versions above)
   async getReceiptTypeDistribution() {
     return await this.get('/dashboard/distribution/receipt-types');
   }
 
-  async getPaymentModeDistribution() {
-    return await this.get('/dashboard/distribution/payment-modes');
-  }
-
   async getRecentTransactions(limit: number = 10) {
-    return await this.get('/dashboard/recent', { params: { limit } });
+    return await this.get('/dashboard/recent-receipts', { params: { limit } });
   }
 
   async getCustomerGrowth(months: number = 12) {
@@ -570,7 +590,6 @@ class ApiService {
   async getDailyTrend(days: number = 30) {
     return await this.get('/dashboard/trend/daily', { params: { days } });
   }
-
   async getYearlyComparison() {
     return await this.get('/dashboard/comparison/yearly');
   }
@@ -652,6 +671,16 @@ class ApiService {
     return await this.post(`/challans/${challanId}/reject`);
   }
 
+  // User toggle status
+  async toggleUserStatus(userId: string) {
+    return await this.patch(`/users/${userId}/toggle-status`);
+  }
+
+  // User assign role in store
+  async assignRoleInStore(userId: string, roleId: string) {
+    return await this.post(`/users/${userId}/assign-role`, { roleId });
+  }
+
   // Generic HTTP methods
   async get<T = any>(url: string, config?: any) {
     const response = await this.api.get<T>(url, config);
@@ -665,6 +694,11 @@ class ApiService {
 
   async put<T = any>(url: string, data?: any, config?: any) {
     const response = await this.api.put<T>(url, data, config);
+    return response.data;
+  }
+
+  async patch<T = any>(url: string, data?: any, config?: any) {
+    const response = await this.api.patch<T>(url, data, config);
     return response.data;
   }
 

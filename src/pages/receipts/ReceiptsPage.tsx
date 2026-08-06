@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
-import { Plus, Search, Filter, Download, Eye, Edit, Check } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Plus, Search, Eye, Check, X, FileEdit, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-
 import { usePermissions } from '@/hooks/usePermissions';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -12,29 +11,70 @@ import { Modal } from '@/components/ui/Modal';
 import { apiService } from '@/services/api';
 import { Receipt } from '@/types';
 import { CreateReceiptModal } from './CreateReceiptModal';
-import { EditReceiptModal } from './EditReceiptModal';
+
+const stateColor: Record<string, string> = {
+  PENDING_APPROVAL: 'text-yellow-700 bg-yellow-100',
+  APPROVED: 'text-green-700 bg-green-100',
+  REJECTED: 'text-red-700 bg-red-100',
+  CANCELLED: 'text-gray-600 bg-gray-100',
+  DRAFT: 'text-blue-700 bg-blue-100',
+};
 
 export const ReceiptsPage: React.FC = () => {
   const { t } = useTranslation();
-  const { canCreate, canUpdate, canApprove } = usePermissions();
+  const queryClient = useQueryClient();
+  const { canCreate, canApprove } = usePermissions();
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
-  const [editingReceipt, setEditingReceipt] = useState<Receipt | null>(null);
+  const [changeRequestModal, setChangeRequestModal] = useState<{ receipt: Receipt; action: 'UPDATE' | 'DELETE' } | null>(null);
+  const [changeReason, setChangeReason] = useState('');
+  const [newData, setNewData] = useState<any>({});
 
-  const { data: receipts, isLoading } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['receipts', searchTerm],
     queryFn: () => apiService.getReceipts({ search: searchTerm }),
   });
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'PAID': return 'text-green-600 bg-green-100';
-      case 'PARTIALLY_PAID': return 'text-yellow-600 bg-yellow-100';
-      case 'UNPAID': return 'text-red-600 bg-red-100';
-      default: return 'text-gray-600 bg-gray-100';
+  const approveMutation = useMutation({
+    mutationFn: (id: string) => apiService.approveReceipt(id),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['receipts'] }); toast.success('Receipt approved'); },
+    onError: (e: any) => toast.error(e.message || 'Failed to approve'),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (id: string) => apiService.rejectReceipt(id),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['receipts'] }); toast.success('Receipt rejected'); },
+    onError: (e: any) => toast.error(e.message || 'Failed to reject'),
+  });
+
+  const changeRequestMutation = useMutation({
+    mutationFn: (data: any) => apiService.createChangeRequest(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['receipts'] });
+      toast.success('Change request submitted for approval');
+      setChangeRequestModal(null);
+      setChangeReason('');
+      setNewData({});
+    },
+    onError: (e: any) => toast.error(e.message || 'Failed to submit change request'),
+  });
+
+  const handleChangeRequest = () => {
+    if (!changeRequestModal || !changeReason.trim()) {
+      toast.error('Reason is required');
+      return;
     }
+    changeRequestMutation.mutate({
+      entityType: 'RECEIPT',
+      entityId: changeRequestModal.receipt.id,
+      action: changeRequestModal.action,
+      reason: changeReason,
+      newData: changeRequestModal.action === 'UPDATE' ? newData : undefined,
+    });
   };
+
+  const receipts: Receipt[] = data?.DDMS_data?.receipts || data?.DDMS_data || [];
 
   if (isLoading) {
     return (
@@ -43,9 +83,7 @@ export const ReceiptsPage: React.FC = () => {
           <h1 className="text-2xl font-bold text-secondary-900">{t('navigation.receipts')}</h1>
         </div>
         <div className="animate-pulse space-y-4">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-16 bg-secondary-200 rounded"></div>
-          ))}
+          {[...Array(5)].map((_, i) => <div key={i} className="h-16 bg-secondary-200 rounded" />)}
         </div>
       </div>
     );
@@ -66,25 +104,15 @@ export const ReceiptsPage: React.FC = () => {
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <CardTitle>{t('receipt.receiptNumber')}</CardTitle>
-            <div className="flex gap-2 w-full sm:w-auto">
-              <div className="relative flex-1 sm:w-64">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-400 w-4 h-4" />
-                <Input
-                  placeholder={t('common.search')}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Button variant="outline" size="sm">
-                <Filter className="w-4 h-4 mr-2" />
-                {t('common.filter')}
-              </Button>
-              <Button variant="outline" size="sm">
-                <Download className="w-4 h-4 mr-2" />
-                {t('common.export')}
-              </Button>
+            <CardTitle>Receipts ({receipts.length})</CardTitle>
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-400 w-4 h-4" />
+              <Input
+                placeholder={t('common.search')}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
             </div>
           </div>
         </CardHeader>
@@ -93,78 +121,66 @@ export const ReceiptsPage: React.FC = () => {
           <table className="table">
             <thead className="table-header">
               <tr>
-                <th className="table-header-cell">{t('receipt.receiptNumber')}</th>
-                <th className="table-header-cell">{t('receipt.date')}</th>
-                <th className="table-header-cell">{t('receipt.customer')}</th>
-                <th className="table-header-cell">{t('receipt.totalAmount')}</th>
-                <th className="table-header-cell">{t('receipt.status')}</th>
-                <th className="table-header-cell">{t('receipt.paymentMode')}</th>
+                <th className="table-header-cell">Receipt #</th>
+                <th className="table-header-cell">Date</th>
+                <th className="table-header-cell">Customer</th>
+                <th className="table-header-cell">Amount</th>
+                <th className="table-header-cell">State</th>
+                <th className="table-header-cell">Payment</th>
                 <th className="table-header-cell">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-secondary-200">
-              {receipts?.DDMS_data?.receipts?.length === 0 ? (
+              {receipts.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="table-cell text-center py-8 text-secondary-500">
-                    {t('receipt.noReceipts')}
-                  </td>
+                  <td colSpan={7} className="table-cell text-center py-8 text-secondary-500">No receipts found</td>
                 </tr>
               ) : (
-                receipts?.DDMS_data?.receipts?.map((receipt: Receipt) => (
+                receipts.map((receipt) => (
                   <tr key={receipt.id} className="hover:bg-secondary-50">
-                    <td className="table-cell font-medium">{receipt.receiptNumber}</td>
-                    <td className="table-cell">{new Date(receipt.date).toLocaleDateString()}</td>
-                    <td className="table-cell">{receipt.customerName}</td>
-                    <td className="table-cell">₹{receipt.totalAmount.toLocaleString()}</td>
+                    <td className="table-cell font-medium">{receipt.receipt_number}</td>
+                    <td className="table-cell">{new Date(receipt.created_at).toLocaleDateString()}</td>
                     <td className="table-cell">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(receipt.status)}`}>
-                        {t(`receipt.${receipt.status.toLowerCase()}`)}
+                      <div>
+                        <p className="font-medium">{receipt.customer_name}</p>
+                        <p className="text-xs text-secondary-500">{receipt.customer_mobile}</p>
+                      </div>
+                    </td>
+                    <td className="table-cell font-medium">₹{Number(receipt.total_amount).toLocaleString()}</td>
+                    <td className="table-cell">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${stateColor[receipt.receipt_state] || 'text-gray-600 bg-gray-100'}`}>
+                        {receipt.receipt_state}
                       </span>
                     </td>
-                    <td className="table-cell">{receipt.paymentMode ? t(`receipt.${receipt.paymentMode.toLowerCase()}`) : '-'}</td>
+                    <td className="table-cell">{receipt.payment_mode}</td>
                     <td className="table-cell">
-                      <div className="flex space-x-2">
+                      <div className="flex space-x-1">
                         <Button variant="ghost" size="sm" onClick={() => setSelectedReceipt(receipt)}>
                           <Eye className="w-4 h-4" />
                         </Button>
-                        {canUpdate('receipts') && (
-                          <Button variant="ghost" size="sm" onClick={() => setEditingReceipt(receipt)}>
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                        )}
-                        {canApprove('RECEIPT') && receipt.status === 'PENDING' && (
+                        {canApprove('RECEIPT') && receipt.receipt_state === 'PENDING_APPROVAL' && (
                           <>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="text-green-600 hover:text-green-700"
-                              onClick={async () => {
-                                try {
-                                  await apiService.approveReceipt(receipt.id);
-                                  toast.success('Receipt approved');
-                                  window.location.reload();
-                                } catch (error) {
-                                  toast.error('Failed to approve');
-                                }
-                              }}
-                            >
+                            <Button variant="ghost" size="sm" className="text-green-600"
+                              onClick={() => approveMutation.mutate(receipt.id)}
+                              disabled={approveMutation.isPending}>
                               <Check className="w-4 h-4" />
                             </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="text-red-600 hover:text-red-700"
-                              onClick={async () => {
-                                try {
-                                  await apiService.rejectReceipt(receipt.id);
-                                  toast.success('Receipt rejected');
-                                  window.location.reload();
-                                } catch (error) {
-                                  toast.error('Failed to reject');
-                                }
-                              }}
-                            >
-                              X
+                            <Button variant="ghost" size="sm" className="text-red-600"
+                              onClick={() => rejectMutation.mutate(receipt.id)}
+                              disabled={rejectMutation.isPending}>
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </>
+                        )}
+                        {receipt.receipt_state !== 'CANCELLED' && receipt.receipt_state !== 'REJECTED' && (
+                          <>
+                            <Button variant="ghost" size="sm" className="text-blue-600"
+                              onClick={() => { setChangeRequestModal({ receipt, action: 'UPDATE' }); setNewData({ total_amount: receipt.total_amount, payment_mode: receipt.payment_mode }); }}>
+                              <FileEdit className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" className="text-red-600"
+                              onClick={() => setChangeRequestModal({ receipt, action: 'DELETE' })}>
+                              <Trash2 className="w-4 h-4" />
                             </Button>
                           </>
                         )}
@@ -178,58 +194,76 @@ export const ReceiptsPage: React.FC = () => {
         </div>
       </Card>
 
-      {/* Create Receipt Modal */}
-      <CreateReceiptModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-      />
+      <CreateReceiptModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} />
 
-      {/* Edit Receipt Modal */}
-      <EditReceiptModal
-        isOpen={!!editingReceipt}
-        onClose={() => setEditingReceipt(null)}
-        receipt={editingReceipt}
-      />
-
-      {/* View Receipt Modal */}
-      <Modal
-        isOpen={!!selectedReceipt}
-        onClose={() => setSelectedReceipt(null)}
-        title={`Receipt ${selectedReceipt?.receiptNumber}`}
-        size="lg"
-      >
+      {/* View Modal */}
+      <Modal isOpen={!!selectedReceipt} onClose={() => setSelectedReceipt(null)}
+        title={`Receipt ${selectedReceipt?.receipt_number}`} size="lg">
         {selectedReceipt && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="form-label">{t('receipt.date')}</label>
-                <p>{new Date(selectedReceipt.date).toLocaleDateString()}</p>
-              </div>
-              <div>
-                <label className="form-label">{t('receipt.customer')}</label>
-                <p>{selectedReceipt.customerName}</p>
-              </div>
-              <div>
-                <label className="form-label">{t('receipt.totalAmount')}</label>
-                <p>₹{selectedReceipt.totalAmount.toLocaleString()}</p>
-              </div>
-              <div>
-                <label className="form-label">{t('receipt.status')}</label>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedReceipt.status)}`}>
-                  {t(`receipt.${selectedReceipt.status.toLowerCase()}`)}
+              <div><label className="form-label">Customer</label><p>{selectedReceipt.customer_name} ({selectedReceipt.customer_mobile})</p></div>
+              <div><label className="form-label">Account #</label><p>{selectedReceipt.account_number}</p></div>
+              <div><label className="form-label">Amount</label><p className="font-bold text-lg">₹{Number(selectedReceipt.total_amount).toLocaleString()}</p></div>
+              <div><label className="form-label">Payment Mode</label><p>{selectedReceipt.payment_mode}</p></div>
+              <div><label className="form-label">State</label>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${stateColor[selectedReceipt.receipt_state]}`}>
+                  {selectedReceipt.receipt_state}
                 </span>
               </div>
+              <div><label className="form-label">Created By</label><p>{selectedReceipt.created_by_name}</p></div>
             </div>
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setSelectedReceipt(null)}>
-                {t('common.close')}
-              </Button>
-              <Button>
-                {t('receipt.printReceipt')}
-              </Button>
+            {selectedReceipt.particulars && selectedReceipt.particulars.length > 0 && (
+              <div>
+                <label className="form-label">Particulars</label>
+                <table className="w-full text-sm mt-1">
+                  <thead><tr className="border-b"><th className="text-left py-1">Item</th><th className="text-right py-1">Amount</th></tr></thead>
+                  <tbody>
+                    {selectedReceipt.particulars.map((p) => (
+                      <tr key={p.id} className="border-b last:border-0">
+                        <td className="py-1">{p.particular_name}</td>
+                        <td className="py-1 text-right">₹{Number(p.amount).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {selectedReceipt.cancel_reason && (
+              <div className="bg-red-50 p-3 rounded"><label className="form-label text-red-700">Cancel Reason</label><p>{selectedReceipt.cancel_reason}</p></div>
+            )}
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => setSelectedReceipt(null)}>{t('common.close')}</Button>
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Change Request Modal */}
+      <Modal isOpen={!!changeRequestModal} onClose={() => { setChangeRequestModal(null); setChangeReason(''); setNewData({}); }}
+        title={changeRequestModal?.action === 'DELETE' ? 'Request Receipt Cancellation' : 'Request Receipt Update'} size="md">
+        <div className="space-y-4">
+          <div className="bg-amber-50 border border-amber-200 rounded p-3 text-sm text-amber-800">
+            This will create a change request that requires approval from your Store Admin.
+          </div>
+          {changeRequestModal?.action === 'UPDATE' && (
+            <div className="space-y-3">
+              <Input label="New Total Amount" type="number" value={newData.total_amount || ''}
+                onChange={(e) => setNewData({ ...newData, total_amount: Number(e.target.value) })} />
+            </div>
+          )}
+          <div>
+            <label className="form-label">Reason *</label>
+            <textarea className="input w-full h-20 resize-none" placeholder="Explain why this change is needed..."
+              value={changeReason} onChange={(e) => setChangeReason(e.target.value)} />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => { setChangeRequestModal(null); setChangeReason(''); }}>Cancel</Button>
+            <Button onClick={handleChangeRequest} disabled={changeRequestMutation.isPending}>
+              {changeRequestMutation.isPending ? 'Submitting...' : 'Submit Request'}
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

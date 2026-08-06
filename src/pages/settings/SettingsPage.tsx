@@ -66,7 +66,7 @@ export const SettingsPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [storeLoading, setStoreLoading] = useState(false);
   
-  const isSuperAdmin = user?.roles?.some(role => role.roleName === 'SUPER_ADMIN');
+  const isSuperAdmin = user?.roles?.some(role => role.name === 'SUPER_ADMIN');
   const hasStoreEditPermission = user?.roles?.some(role => 
     role.permissions?.some(perm => perm.resource === 'stores' && perm.action === 'update')
   );

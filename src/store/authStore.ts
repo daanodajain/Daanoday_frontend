@@ -62,25 +62,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       },
 
       setCurrentStore: async (store) => {
-        const { user, token } = get();
-        if (user && token) {
-          try {
-            const { apiService } = await import('@/services/api');
-            const response = await apiService.post('/store-context/switch', {
-              storeId: store.id
-            });
-            
-            // Update token and store context
-            set({
-              currentStore: store,
-              token: response.DDMS_data.token,
-              user: { ...user, currentStoreId: store.id },
-            });
-          } catch (error) {
-            console.error('Store switch failed:', error);
-            throw error;
-          }
-        }
+        set({ currentStore: store });
       },
 
       logout: async () => {
@@ -106,8 +88,8 @@ export const useAuthStore = create<AuthState & AuthActions>()(
             lastActivityTime: Date.now(),
             isSessionActive: false,
           });
-          // Force clear localStorage to prevent stale auth state
           localStorage.removeItem('auth-storage');
+          window.location.href = '/login';
         }
       },
 

@@ -32,7 +32,7 @@ export const SuperAdminSubscriptionsPage: React.FC = () => {
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const isSuperAdmin = user?.roles?.some(role => role.roleName === 'SUPER_ADMIN');
+  const isSuperAdmin = user?.roles?.some(role => role.name === 'SUPER_ADMIN');
 
   const { data: subscriptions, isLoading } = useQuery({
     queryKey: ['super-admin-subscriptions'],

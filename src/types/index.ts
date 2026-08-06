@@ -1,308 +1,281 @@
-// API Response Format
+// ── API Response ─────────────────────────────────────────────
 export interface DDMSResponse<T = any> {
-  DDMS_status: 'success' | 'error' | 'warning';
-  DDMS_login_status: 'authenticated' | 'unauthenticated' | 'expired';
+  status: 'SUCCESS' | 'ERROR';
+  DDMS_data?: T;
   DDMS_error_code?: string;
-  DDMS_data: T;
 }
 
-// Authentication
-export interface LoginRequest {
-  mobile: string;
-  password?: string;
-  otp?: string;
-}
-
+// ── Auth ──────────────────────────────────────────────────────
 export interface AuthUser {
   id: string;
   name: string;
   mobile: string;
-  email?: string;
   roles: UserRole[];
-  currentStoreId?: string;
   stores: Store[];
-  permissions?: Permission[]; // <-- add this line for compatibility with backend response
 }
 
-// Store Management
+export interface UserRole {
+  name: 'SUPER_ADMIN' | 'STORE_ADMIN' | 'SUB_ADMIN' | 'RECEIPT_MANAGER' | 'CASHIER';
+  store_id: string | null;
+  store_name: string | null;
+  permissions: Permission[];
+}
+
+export interface Permission {
+  resource: string;
+  action: string;
+}
+
+// ── Store ─────────────────────────────────────────────────────
 export interface Store {
   id: string;
   name: string;
-  address: string;
-  city: string;
-  state: string;
-  contact: string;
-  receiptLayout: string;
-  paymentOptions: PaymentOption[];
-  onlinePaymentEnabled: boolean;
-  subscriptionStatus: 'active' | 'inactive' | 'expired';
-  createdAt: string;
-  updatedAt: string;
+  store_admin_id: string | null;
+  subscription_status: 'ACTIVE' | 'EXPIRED' | 'SUSPENDED';
+  online_payment_enabled: boolean;
+  active: boolean;
+  admin_name?: string;
+  admin_mobile?: string;
+  created_at: string;
 }
 
-export interface PaymentOption {
-  type: 'cash' | 'cheque' | 'online';
-  enabled: boolean;
+export interface StoreSettings {
+  id: string;
+  store_id: string;
+  receipt_prefix: string;
+  challan_prefix: string;
+  auto_approve_cash: boolean;
+  cash_approval_limit: number;
+  razorpay_key_id: string | null;
+  razorpay_key_secret: string | null;
+  sms_enabled: boolean;
+  email_enabled: boolean;
+  locked_before_date: string | null;
+  enable_80g: boolean;
+  auto_send_receipt_sms: boolean;
+  auto_send_receipt_email: boolean;
 }
 
-// User Management
+// ── User ──────────────────────────────────────────────────────
 export interface User {
   id: string;
   name: string;
   mobile: string;
-  email?: string;
-  address: string;
-  familyDetails?: FamilyDetails;
   active: boolean;
-  roles: UserRole[];
-  storeId: string;
-  createdAt: string;
-  updatedAt: string;
+  first_login: boolean;
+  linked_customer_id: string | null;
+  role_name: string;
+  created_at: string;
 }
 
-export interface FamilyDetails {
-  spouseName?: string;
-  children?: string[];
-  emergencyContact?: string;
-}
-
-// Role & Permission Management
-export interface Role {
-  id: string;
-  name: string;
-  description: string;
-  storeId: string;
-  permissions: Permission[];
-  createdAt: string;
-}
-
-export interface Permission {
-  id: string;
-  name: string;
-  resource: string;
-  action: string;
-  parentId?: string;
-  children?: Permission[];
-}
-
-// UserRole - supports both login response format (roleName) and users API format (name)
-export interface UserRole {
-  roleId?: string;
-  id?: string;
-  roleName?: string;
-  name?: string;
-  storeId: string;
-  storeName?: string;
-  permissions: Permission[];
-}
-
-// Customer Management
+// ── Customer ──────────────────────────────────────────────────
 export interface Customer {
   id: string;
-  accountNumber: string;
   name: string;
   mobile: string;
-  email?: string;
-  address: string;
-  familyDetails?: FamilyDetails;
-  active: boolean;
-  storeId: string;
-  createdAt: string;
-  updatedAt: string;
+  account_number: string;
+  is_primary_store: boolean;
+  first_login: boolean;
+  created_at: string;
 }
 
-// Supplier Management
+// ── Supplier ──────────────────────────────────────────────────
 export interface Supplier {
   id: string;
-  companyName: string;
-  contactPerson: string;
-  phone: string;
-  email?: string;
-  address: string;
+  store_id: string;
+  name: string;
+  mobile: string | null;
   active: boolean;
-  storeId: string;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
 }
 
-// Particulars Management
+// ── Particular ────────────────────────────────────────────────
 export interface Particular {
   id: string;
-  name: string;
+  store_id: string;
   type: 'RECEIPT' | 'CHALLAN';
+  name: string;
   active: boolean;
-  storeId: string;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
 }
 
-// Receipt Management
+// ── Receipt ───────────────────────────────────────────────────
+export type ReceiptState = 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+export type PaymentMode = 'CASH' | 'CHEQUE' | 'ONLINE';
+
 export interface Receipt {
   id: string;
-  receiptNumber: string;
-  date: string;
-  referenceNumber?: string;
-  customerId: string;
-  customerName: string;
-  items: ReceiptItem[];
-  totalAmount: number;
-  status: 'PAID' | 'PARTIALLY_PAID' | 'UNPAID';
-  paymentMode: 'CASH' | 'CHEQUE' | 'ONLINE';
-  onlinePaymentDetails?: OnlinePaymentDetails;
-  approvalRequired: boolean;
-  approvedBy?: string;
-  approvedAt?: string;
-  storeId: string;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
+  store_id: string;
+  receipt_number: string;
+  customer_id: string;
+  customer_name: string;
+  customer_mobile: string;
+  account_number: string;
+  total_amount: number;
+  payment_mode: PaymentMode;
+  receipt_state: ReceiptState;
+  status: 'UNPAID' | 'PAID';
+  cancel_reason: string | null;
+  created_by: string;
+  created_by_name: string;
+  created_at: string;
+  particulars?: ReceiptParticular[];
 }
 
-export interface ReceiptItem {
+export interface ReceiptParticular {
   id: string;
-  particularId: string;
-  particularName: string;
+  receipt_id: string;
+  particular_id: string;
+  particular_name: string;
   amount: number;
 }
 
-export interface OnlinePaymentDetails {
-  upiId?: string;
-  transactionReference: string;
-  paymentGateway: string;
-}
-
-// Challan Management
+// ── Challan ───────────────────────────────────────────────────
 export interface Challan {
   id: string;
-  challanNumber: string;
-  date: string;
-  referenceNumber?: string;
-  supplierId: string;
-  supplierName: string;
-  items: ChallanItem[];
-  totalAmount: number;
-  status: 'PAID' | 'PARTIALLY_PAID' | 'UNPAID';
-  paymentMode: 'CASH' | 'CHEQUE' | 'ONLINE';
-  approvalRequired: boolean;
-  approvedBy?: string;
-  approvedAt?: string;
-  storeId: string;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
+  store_id: string;
+  challan_number: string;
+  supplier_id: string;
+  supplier_name: string;
+  supplier_mobile: string | null;
+  total_amount: number;
+  payment_mode: PaymentMode;
+  status: 'UNPAID' | 'PAID' | 'CANCELLED';
+  cancel_reason: string | null;
+  created_by: string;
+  created_by_name: string;
+  created_at: string;
+  particulars?: ChallanParticular[];
 }
 
-export interface ChallanItem {
+export interface ChallanParticular {
   id: string;
-  particularId: string;
-  particularName: string;
+  challan_id: string;
+  particular_id: string;
+  particular_name: string;
   amount: number;
 }
 
-// Transaction Management
+// ── Change Request ────────────────────────────────────────────
+export interface ChangeRequest {
+  id: string;
+  store_id: string;
+  entity_type: 'RECEIPT' | 'CHALLAN';
+  entity_id: string;
+  action: 'UPDATE' | 'DELETE';
+  requested_by: string;
+  requested_by_name: string;
+  old_data: any;
+  new_data: any | null;
+  reason: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  reviewed_by: string | null;
+  reviewed_by_name: string | null;
+  review_note: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+}
+
+// ── Transaction ───────────────────────────────────────────────
 export interface Transaction {
   id: string;
+  store_id: string;
   type: 'RECEIPT' | 'CHALLAN';
-  referenceId: string;
-  referenceNumber: string;
+  reference_id: string;
   amount: number;
-  paymentMode: 'CASH' | 'CHEQUE' | 'ONLINE';
-  customerId?: string;
-  supplierId?: string;
-  storeId: string;
-  createdAt: string;
+  payment_mode: PaymentMode;
+  status: 'INITIATED' | 'SUCCESS' | 'FAILED';
+  customer_name?: string;
+  supplier_name?: string;
+  created_at: string;
 }
 
-// Notifications
+// ── Notification ──────────────────────────────────────────────
 export interface Notification {
   id: string;
-  title: string;
+  user_id: string;
+  store_id: string;
+  type: 'INFO' | 'SUCCESS' | 'WARNING' | 'RECEIPT_APPROVAL' | 'PAYMENT_RECEIVED' | 'CHANGE_REQUEST';
   message: string;
-  type: 'info' | 'success' | 'warning' | 'error';
-  read: boolean;
-  userId: string;
-  storeId: string;
-  createdAt: string;
+  reference_id: string | null;
+  reference_type: string | null;
+  read_status: boolean;
+  created_at: string;
 }
 
-// News & Events
+// ── News & Events ─────────────────────────────────────────────
 export interface NewsEvent {
   id: string;
+  store_id: string;
+  type: 'NEWS' | 'EVENT' | 'ANNOUNCEMENT';
   title: string;
-  content: string;
-  type: 'news' | 'event';
-  publishDate: string;
+  content: string | null;
+  publish_date: string | null;
+  priority: number;
   active: boolean;
-  storeId: string;
-  createdBy: string;
-  createdAt: string;
+  created_by_user_id: string;
+  created_at: string;
 }
 
-// Reports
-export interface ReportFilter {
-  startDate?: string;
-  endDate?: string;
-  customerId?: string;
-  supplierId?: string;
-  status?: string;
-  paymentMode?: string;
+// ── Audit Log ─────────────────────────────────────────────────
+export interface AuditLog {
+  id: string;
+  store_id: string | null;
+  user_id: string | null;
+  user_name: string | null;
+  action: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  details: any | null;
+  created_at: string;
 }
 
-// Form Types
+// ── Role ──────────────────────────────────────────────────────
+export interface Role {
+  id: string;
+  store_id: string | null;
+  name: 'SUPER_ADMIN' | 'STORE_ADMIN' | 'SUB_ADMIN' | 'RECEIPT_MANAGER' | 'CASHIER';
+}
+
+// ── Subscription ──────────────────────────────────────────────
+export interface Subscription {
+  id: string;
+  store_id: string;
+  store_name?: string;
+  plan_type: 'FREE' | 'BASIC' | 'STANDARD' | 'PREMIUM' | 'ENTERPRISE';
+  status: 'ACTIVE' | 'EXPIRED' | 'SUSPENDED' | 'CANCELLED' | 'TRIAL';
+  start_date: string;
+  end_date: string;
+  monthly_fee: number;
+  notes: string | null;
+}
+
+// ── Dashboard ─────────────────────────────────────────────────
+export interface DashboardStats {
+  today: { receipts: number; collection: number };
+  month: { receipts: number; collection: number };
+  total: { receipts: number; collection: number };
+  pendingApprovals: number;
+  pendingChangeRequests: number;
+  totalCustomers: number;
+}
+
+export interface RevenueDataPoint {
+  date: string;
+  amount: number;
+}
+
+export interface PaymentModeData {
+  mode: PaymentMode;
+  count: number;
+  amount: number;
+}
+
+// ── Form helpers ──────────────────────────────────────────────
 export interface LoginFormData {
   mobile: string;
   password?: string;
   otp?: string;
   newPassword?: string;
   confirmPassword?: string;
-}
-
-export interface ReceiptFormData {
-  date: string;
-  referenceNumber?: string;
-  customerId: string;
-  items: {
-    particularId: string;
-    amount: number;
-  }[];
-  paymentMode: 'CASH' | 'CHEQUE' | 'ONLINE';
-  onlinePaymentDetails?: {
-    upiId?: string;
-    transactionReference: string;
-  };
-}
-
-export interface ChallanFormData {
-  date: string;
-  referenceNumber?: string;
-  supplierId: string;
-  items: {
-    particularId: string;
-    amount: number;
-  }[];
-  paymentMode: 'CASH' | 'CHEQUE' | 'ONLINE';
-}
-
-// Session Management
-export interface SessionState {
-  isSessionWarningVisible: boolean;
-  remainingTime: number;
-  lastActivityTime: number;
-  isSessionActive: boolean;
-}
-
-export interface SessionConfig {
-  timeoutDuration: number; // in milliseconds, default 15 minutes (900000ms)
-  warningDuration: number; // in milliseconds, default 2 minutes (120000ms)
-  warningCountdownInterval: number; // in milliseconds, default 1 second (1000ms)
-}
-
-export interface SessionActions {
-  resetSession: () => void;
-  showSessionWarning: () => void;
-  hideSessionWarning: () => void;
-  setRemainingTime: (time: number) => void;
-  startSessionWarningCountdown: () => void;
-  logout: () => Promise<void>;
-  extendSession: () => void;
 }

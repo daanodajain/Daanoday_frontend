@@ -70,7 +70,7 @@ const sendOtpMutation = useMutation({
       toast.error('Empty response from server');
       return;
     }
-    if (payload.DDMS_status === 'success') {
+    if (payload?.status === 'SUCCESS') {
       const msg = payload?.DDMS_data?.message;
       if (payload.DDMS_data?.requiresPassword) {
         toast.success(msg || 'Please enter your password');
@@ -100,7 +100,7 @@ const sendOtpMutation = useMutation({
       return apiService.login(data.mobile, data.password, data.otp, data.newPassword);
     },
     onSuccess: (data) => {
-      if (data.DDMS_status === 'success') {
+      if (data?.status === 'SUCCESS') {
         const { user, token, refreshToken } = data.DDMS_data;
         setAuth(user, token, refreshToken);
         toast.success(t('auth.loginSuccess'));

@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { Layout } from '@/components/layout/Layout';
 import { LoginPage } from '@/pages/auth/LoginPage';
-import { CustomerLoginPage } from '@/pages/customer-portal/CustomerLoginPage';
+import { CustomerLoginPage } from '@/pages/auth/CustomerLoginPage';
 import { CustomerDashboard } from '@/pages/customer-portal/CustomerDashboard';
 import { DashboardPage } from '@/pages/dashboard/DashboardPage';
 import { StoresPage } from '@/pages/stores/StoresPage';
@@ -21,6 +21,7 @@ import { NotificationsPage } from '@/pages/notifications/NotificationsPage';
 import { NewsPage } from '@/pages/news/NewsPage';
 import { SettingsPage } from '@/pages/settings/SettingsPage';
 import { AuditLogsPage } from '@/pages/audit/AuditLogsPage';
+import { ChangeRequestsPage } from '@/pages/change-requests/ChangeRequestsPage';
 import { useAuthStore } from '@/store/authStore';
 import { useSessionTimeout } from '@/hooks/useSessionTimeout';
 import { SessionTimeoutModal } from '@/components/session/SessionTimeoutModal';
@@ -128,6 +129,7 @@ const AppRoutes: React.FC = () => {
         <Route path="news" element={<NewsPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="audit" element={<AuditLogsPage />} />
+        <Route path="change-requests" element={<ChangeRequestsPage />} />
       </Route>
     </Routes>
   );

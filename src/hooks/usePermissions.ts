@@ -3,12 +3,9 @@ import { useAuthStore } from '@/store/authStore';
 export const usePermissions = () => {
   const { user } = useAuthStore();
 
-  // Check if user is Super Admin - handles both old format (roleName) and new format (name)
+  // Check if user is Super Admin
   const isSuperAdmin = () => {
-    return user?.roles?.some(role => 
-      role.roleName === 'SUPER_ADMIN' || 
-      role.name === 'SUPER_ADMIN'
-    ) || false;
+    return user?.roles?.some(role => role.name === 'SUPER_ADMIN') || false;
   };
 
   const hasPermission = (resource: string, action: string): boolean => {
@@ -25,10 +22,7 @@ export const usePermissions = () => {
     )) return true;
 
     // Fallback: check top-level permissions array (from login response)
-    if (user.permissions?.some(
-      (perm: any) => perm.resource === resource && perm.action === action
-    )) return true;
-
+    // Note: AuthUser does not have top-level permissions in new schema
     return false;
   };
 

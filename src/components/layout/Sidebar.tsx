@@ -17,7 +17,8 @@ import {
   Shield,
   Settings,
   LogOut,
-  History
+  History,
+  GitPullRequest
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { clsx } from 'clsx';
@@ -37,6 +38,7 @@ const navigationItems = [
   { key: 'notifications', icon: Bell, path: '/notifications' },
   { key: 'news', icon: Newspaper, path: '/news' },
   { key: 'audit', icon: History, path: '/audit' },
+  { key: 'changeRequests', icon: GitPullRequest, path: '/change-requests' },
 ];
 
 interface SidebarProps {
@@ -53,7 +55,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     onClose();
   };
 
-  const isSuperAdmin = user?.roles?.some(role => role.roleName === 'SUPER_ADMIN') || false;
+  const isSuperAdmin = user?.roles?.some(role => role.name === 'SUPER_ADMIN') || false;
 
   return (
     <>
@@ -85,7 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 {currentStore.name}
               </p>
               <p className="text-xs text-primary-600">
-                {currentStore.city}, {currentStore.state}
+                {currentStore.subscription_status}
               </p>
             </div>
           )}
