@@ -376,14 +376,6 @@ class ApiService {
     return response.data;
   }
 
-  async markAllNotificationsRead() {
-    return await this.patch('/notifications/mark-all-read');
-  }
-
-  async deleteNotification(notificationId: string) {
-    return await this.delete(`/notifications/${notificationId}`);
-  }
-
   // News & Events
   async getNewsEvents() {
     const response = await this.api.get<DDMSResponse>('/news-events');
