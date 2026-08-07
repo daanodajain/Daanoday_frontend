@@ -84,25 +84,20 @@ class ApiService {
   }
 
   // Authentication
-  async login(mobile: string, password?: string, otp?: string, newPassword?: string) {
+  async login(identifier: string, password: string) {
     const response = await this.api.post<DDMSResponse>('/auth/login', {
-      mobile,
+      identifier,
       password,
-      otp,
-      newPassword,
     });
     return response.data;
   }
 
-  async sendOTP(mobile: string) {
-  try {
-     console.log('>>> sendOTP calling (full URL):', this.api.defaults.baseURL + '/auth/send-otp');
-    const res = await this.api.post('/auth/send-otp', { mobile });
-    return res.data;
-  } catch (err: any) {
-    throw err;
-   }
-};  
+  async changePassword(newPassword: string) {
+    const response = await this.api.post<DDMSResponse>('/auth/change-password', {
+      newPassword,
+    });
+    return response.data;
+  }
 
 
   async refreshAuthToken(refreshToken: string) {
