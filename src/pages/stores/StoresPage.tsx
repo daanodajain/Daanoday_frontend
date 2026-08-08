@@ -53,53 +53,66 @@ export const StoresPage: React.FC = () => {
     adminPassword: '',
   });
 
-  const { data: stores, isLoading } = useQuery({
-    queryKey: ['stores'],
-    queryFn: () => apiService.getStores(),
+  const { data: storesData, isLoading } = useQuery({
+    queryKey: ['super-admin-stores'],
+    queryFn: () => apiService.get('/super-admin/stores'),
   });
 
+  // Support both { stores: [...] } and flat array response
+  const stores = storesData?.DDMS_data?.stores || storesData?.DDMS_data || [];
+
   const createMutation = useMutation({
-    mutationFn: (data: StoreWithAdminFormData) => apiService.createStoreWithAdmin({
-      store: {
-        name: data.name,
-        address: data.address,
-        city: data.city,
-        state: data.state,
-        contact: data.contact,
-        email: data.email,
-        receiptLayout: data.receiptLayout,
-        paymentOptions: data.paymentOptions,
-        onlinePaymentEnabled: data.onlinePaymentEnabled,
-        subscriptionStatus: data.subscriptionStatus,
-        subscriptionExpiresAt: data.subscriptionExpiresAt,
-      },
+    mutationFn: (data: StoreWithAdminFormData) => apiService.post('/super-admin/stores', {
+      name: data.name,
+      address: data.address,
+      city: data.city,
+      state: data.state,
+      contact: data.contact,
+      email: data.email,
+      onlinePaymentEnabled: data.onlinePaymentEnabled,
+      subscriptionStatus: data.subscriptionStatus,
+      subscriptionExpiresAt: data.subscriptionExpiresAt,
       adminName: data.adminName,
       adminMobile: data.adminMobile,
       adminEmail: data.adminEmail,
       adminPassword: data.adminPassword,
     }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['stores'] });
+      queryClient.invalidateQueries({ queryKey: ['super-admin-stores'] });
       toast.success('Store created successfully');
       handleCloseModal();
     },
-    onError: () => toast.error('Failed to create store'),
+    onError: (e: any) => toast.error(e?.response?.data?.DDMS_data || 'Failed to create store'),
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: StoreFormData) => apiService.put(`/stores/${data.id}`, data),
+    mutationFn: (data: StoreFormData) => apiService.put(`/super-admin/stores/${data.id}`, {
+      name: data.name,
+      address: data.address,
+      city: data.city,
+      state: data.state,
+      contact: data.contact,
+      email: data.email,
+      onlinePaymentEnabled: data.onlinePaymentEnabled,
+      subscriptionStatus: data.subscriptionStatus,
+      subscriptionExpiresAt: data.subscriptionExpiresAt,
+      adminName: (data as any).adminName,
+      adminMobile: (data as any).adminMobile,
+      adminEmail: (data as any).adminEmail,
+      adminPassword: (data as any).adminPassword,
+    }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['stores'] });
+      queryClient.invalidateQueries({ queryKey: ['super-admin-stores'] });
       toast.success('Store updated successfully');
       handleCloseModal();
     },
-    onError: () => toast.error('Failed to update store'),
+    onError: (e: any) => toast.error(e?.response?.data?.DDMS_data || 'Failed to update store'),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiService.delete(`/stores/${id}`),
+    mutationFn: (id: number) => apiService.delete(`/super-admin/stores/${id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['stores'] });
+      queryClient.invalidateQueries({ queryKey: ['super-admin-stores'] });
       toast.success('Store deleted successfully');
     },
     onError: () => toast.error('Failed to delete store'),
@@ -206,7 +219,7 @@ export const StoresPage: React.FC = () => {
         <div className="text-center py-8">Loading...</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {stores?.DDMS_data?.stores?.map((store: any) => (
+          {Array.isArray(stores) && stores.map((store: any) => (
             <Card key={store.id}>
               <div className="p-6">
                 <div className="flex justify-between items-start mb-4">
