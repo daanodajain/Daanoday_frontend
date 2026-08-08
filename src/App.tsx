@@ -22,6 +22,8 @@ import { NewsPage } from '@/pages/news/NewsPage';
 import { SettingsPage } from '@/pages/settings/SettingsPage';
 import { AuditLogsPage } from '@/pages/audit/AuditLogsPage';
 import { ChangeRequestsPage } from '@/pages/change-requests/ChangeRequestsPage';
+import { SuperAdminSubscriptionsPage } from '@/pages/super-admin/SuperAdminSubscriptionsPage';
+import { SuperAdminSystemSettingsPage } from '@/pages/super-admin/SuperAdminSystemSettingsPage';
 import { useAuthStore } from '@/store/authStore';
 import { useSessionTimeout } from '@/hooks/useSessionTimeout';
 import { SessionTimeoutModal } from '@/components/session/SessionTimeoutModal';
@@ -29,10 +31,7 @@ import '@/i18n';
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
+    queries: { retry: 1, refetchOnWindowFocus: false },
   },
 });
 
@@ -46,15 +45,13 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return !isAuthenticated ? <>{children}</> : <Navigate to="/dashboard" replace />;
 };
 
-// Session Manager Component
 const SessionManager: React.FC = () => {
   const { isAuthenticated, isSessionWarningVisible, remainingTime, logout, extendSession } = useAuthStore();
   
-  // Initialize session timeout hook
   useSessionTimeout({
     enabled: isAuthenticated,
-    timeoutDuration: 15 * 60 * 1000, // 15 minutes
-    warningDuration: 2 * 60 * 1000, // 2 minutes before timeout
+    timeoutDuration: 30 * 60 * 1000, // 30 minutes
+    warningDuration: 2 * 60 * 1000,
     countdownInterval: 1000,
     onSessionExpired: () => {
       logout();
@@ -75,44 +72,13 @@ const SessionManager: React.FC = () => {
   );
 };
 
-// Main App Routes
 const AppRoutes: React.FC = () => {
-  const { isAuthenticated } = useAuthStore();
-
   return (
     <Routes>
-      <Route
-        path="/login"
-        element={
-          <PublicRoute>
-            <LoginPage />
-          </PublicRoute>
-        }
-      />
-      <Route
-        path="/customer/login"
-        element={
-          <PublicRoute>
-            <CustomerLoginPage />
-          </PublicRoute>
-        }
-      />
-      <Route
-        path="/customer/dashboard"
-        element={
-          <ProtectedRoute>
-            <CustomerDashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
-        }
-      >
+      <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+      <Route path="/customer/login" element={<PublicRoute><CustomerLoginPage /></PublicRoute>} />
+      <Route path="/customer/dashboard" element={<ProtectedRoute><CustomerDashboard /></ProtectedRoute>} />
+      <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="stores" element={<StoresPage />} />
@@ -130,7 +96,10 @@ const AppRoutes: React.FC = () => {
         <Route path="settings" element={<SettingsPage />} />
         <Route path="audit" element={<AuditLogsPage />} />
         <Route path="change-requests" element={<ChangeRequestsPage />} />
+        <Route path="super-admin/subscriptions" element={<SuperAdminSubscriptionsPage />} />
+        <Route path="super-admin/settings" element={<SuperAdminSystemSettingsPage />} />
       </Route>
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
 };
@@ -146,24 +115,9 @@ function App() {
             position="top-right"
             toastOptions={{
               duration: 4000,
-              style: {
-                background: '#363636',
-                color: '#fff',
-              },
-              success: {
-                duration: 3000,
-                iconTheme: {
-                  primary: '#10b981',
-                  secondary: '#fff',
-                },
-              },
-              error: {
-                duration: 4000,
-                iconTheme: {
-                  primary: '#ef4444',
-                  secondary: '#fff',
-                },
-              },
+              style: { background: '#363636', color: '#fff' },
+              success: { duration: 3000, iconTheme: { primary: '#10b981', secondary: '#fff' } },
+              error: { duration: 5000, iconTheme: { primary: '#ef4444', secondary: '#fff' } },
             }}
           />
         </div>

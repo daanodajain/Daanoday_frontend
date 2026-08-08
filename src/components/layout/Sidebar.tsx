@@ -2,43 +2,31 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { 
-  LayoutDashboard, 
-  Store, 
-  Users, 
-  UserCheck, 
-  Truck, 
-  FileText, 
-  Receipt, 
-  FileBarChart, 
-  CreditCard, 
-  BarChart3, 
-  Bell, 
-  Newspaper,
-  Shield,
-  Settings,
-  LogOut,
-  History,
-  GitPullRequest
+  LayoutDashboard, Store, Users, UserCheck, Truck, FileText, Receipt, 
+  FileBarChart, CreditCard, BarChart3, Bell, Newspaper, Shield, Settings, 
+  LogOut, History, GitPullRequest, Crown, Wrench
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { clsx } from 'clsx';
 
 const navigationItems = [
-  { key: 'dashboard', icon: LayoutDashboard, path: '/dashboard' },
-  { key: 'stores', icon: Store, path: '/stores', superAdminOnly: true },
-  { key: 'users', icon: Users, path: '/users' },
-  { key: 'roles', icon: Shield, path: '/roles' },
-  { key: 'customers', icon: UserCheck, path: '/customers' },
-  { key: 'suppliers', icon: Truck, path: '/suppliers' },
-  { key: 'particulars', icon: FileText, path: '/particulars' },
-  { key: 'receipts', icon: Receipt, path: '/receipts' },
-  { key: 'challans', icon: FileBarChart, path: '/challans' },
-  { key: 'transactions', icon: CreditCard, path: '/transactions' },
-  { key: 'reports', icon: BarChart3, path: '/reports' },
-  { key: 'notifications', icon: Bell, path: '/notifications' },
-  { key: 'news', icon: Newspaper, path: '/news' },
-  { key: 'audit', icon: History, path: '/audit' },
-  { key: 'changeRequests', icon: GitPullRequest, path: '/change-requests' },
+  { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+  { key: 'stores', label: 'Stores', icon: Store, path: '/stores', superAdminOnly: true },
+  { key: 'superAdminSubscriptions', label: 'Subscriptions', icon: Crown, path: '/super-admin/subscriptions', superAdminOnly: true },
+  { key: 'superAdminSettings', label: 'System Settings', icon: Wrench, path: '/super-admin/settings', superAdminOnly: true },
+  { key: 'users', label: 'Users', icon: Users, path: '/users' },
+  { key: 'roles', label: 'Roles', icon: Shield, path: '/roles' },
+  { key: 'customers', label: 'Customers', icon: UserCheck, path: '/customers' },
+  { key: 'suppliers', label: 'Suppliers', icon: Truck, path: '/suppliers' },
+  { key: 'particulars', label: 'Particulars', icon: FileText, path: '/particulars' },
+  { key: 'receipts', label: 'Receipts', icon: Receipt, path: '/receipts' },
+  { key: 'challans', label: 'Challans', icon: FileBarChart, path: '/challans' },
+  { key: 'transactions', label: 'Transactions', icon: CreditCard, path: '/transactions' },
+  { key: 'reports', label: 'Reports', icon: BarChart3, path: '/reports' },
+  { key: 'changeRequests', label: 'Change Requests', icon: GitPullRequest, path: '/change-requests' },
+  { key: 'notifications', label: 'Notifications', icon: Bell, path: '/notifications' },
+  { key: 'news', label: 'News & Events', icon: Newspaper, path: '/news' },
+  { key: 'audit', label: 'Audit Logs', icon: History, path: '/audit' },
 ];
 
 interface SidebarProps {
@@ -47,75 +35,83 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
-  const { t } = useTranslation();
-  const { user, logout, currentStore } = useAuthStore();
+  const { user, logout, currentStore, isSuperAdmin } = useAuthStore();
 
   const handleLogout = async () => {
     await logout();
     onClose();
   };
 
-  const isSuperAdmin = user?.roles?.some(role => role.name === 'SUPER_ADMIN') || false;
-
   return (
     <>
-      {/* Mobile overlay */}
       {isOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-secondary-600 bg-opacity-75 lg:hidden"
-          onClick={onClose}
-        />
+        <div className="fixed inset-0 z-40 bg-secondary-600 bg-opacity-75 lg:hidden" onClick={onClose} />
       )}
 
-      {/* Sidebar */}
-      <div
-        className={clsx(
-          'fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0',
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        )}
-      >
+      <div className={clsx(
+        'fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0',
+        isOpen ? 'translate-x-0' : '-translate-x-full'
+      )}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-center h-16 px-4 bg-primary-600">
-            <h1 className="text-xl font-bold text-white">Daanoday</h1>
+          <div className={clsx('flex items-center justify-center h-16 px-4', isSuperAdmin ? 'bg-purple-700' : 'bg-primary-600')}>
+            <h1 className="text-xl font-bold text-white">
+              {isSuperAdmin ? '🛡️ Super Admin' : '🏛️ Daanoday'}
+            </h1>
           </div>
 
           {/* Store Info */}
-          {currentStore && (
+          {currentStore && !isSuperAdmin && (
             <div className="px-4 py-3 bg-primary-50 border-b">
-              <p className="text-sm font-medium text-primary-900">
-                {currentStore.name}
-              </p>
-              <p className="text-xs text-primary-600">
+              <p className="text-sm font-medium text-primary-900">{currentStore.name}</p>
+              <p className={clsx('text-xs font-medium', 
+                currentStore.subscription_status === 'ACTIVE' ? 'text-emerald-600' : 'text-red-600'
+              )}>
                 {currentStore.subscription_status}
               </p>
             </div>
           )}
 
+          {/* Super Admin Badge */}
+          {isSuperAdmin && (
+            <div className="px-4 py-3 bg-purple-50 border-b">
+              <p className="text-xs font-medium text-purple-700">Full System Access</p>
+            </div>
+          )}
+
           {/* Navigation */}
           <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
+            {/* Super Admin section */}
+            {isSuperAdmin && (
+              <p className="px-2 text-xs font-semibold text-secondary-400 uppercase tracking-wider mb-1">Super Admin</p>
+            )}
             {navigationItems.map((item) => {
-              if (item.superAdminOnly && !isSuperAdmin) {
-                return null;
-              }
-
+              if (item.superAdminOnly && !isSuperAdmin) return null;
+              
+              // Add section divider before regular items for super admin
+              const isFirstRegularItem = item.key === 'users';
+              
               return (
-                <NavLink
-                  key={item.key}
-                  to={item.path}
-                  onClick={onClose}
-                  className={({ isActive }) =>
-                    clsx(
+                <React.Fragment key={item.key}>
+                  {isSuperAdmin && isFirstRegularItem && (
+                    <div className="pt-2 pb-1">
+                      <p className="px-2 text-xs font-semibold text-secondary-400 uppercase tracking-wider">Store Management</p>
+                    </div>
+                  )}
+                  <NavLink
+                    to={item.path}
+                    onClick={onClose}
+                    className={({ isActive }) => clsx(
                       'group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors',
                       isActive
-                        ? 'bg-primary-100 text-primary-900'
+                        ? isSuperAdmin ? 'bg-purple-100 text-purple-900' : 'bg-primary-100 text-primary-900'
                         : 'text-secondary-600 hover:bg-secondary-50 hover:text-secondary-900'
-                    )
-                  }
-                >
-                  <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
-                  {t(`navigation.${item.key}`)}
-                </NavLink>
+                    )}
+                  >
+                    <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
+                    {item.label}
+                  </NavLink>
+                </React.Fragment>
               );
             })}
           </nav>
@@ -123,13 +119,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           {/* User Info & Logout */}
           <div className="border-t border-secondary-200 p-4">
             <div className="flex items-center mb-3">
+              <div className={clsx('w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold mr-3',
+                isSuperAdmin ? 'bg-purple-600' : 'bg-primary-600'
+              )}>
+                {user?.name?.charAt(0)?.toUpperCase()}
+              </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-secondary-900 truncate">
-                  {user?.name}
-                </p>
-                <p className="text-xs text-secondary-500 truncate">
-                  {user?.mobile}
-                </p>
+                <p className="text-sm font-medium text-secondary-900 truncate">{user?.name}</p>
+                <p className="text-xs text-secondary-500 truncate">{user?.email || user?.mobile}</p>
               </div>
             </div>
             
@@ -140,7 +137,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 className="group flex items-center px-2 py-2 text-sm font-medium text-secondary-600 rounded-md hover:bg-secondary-50 hover:text-secondary-900"
               >
                 <Settings className="mr-3 h-4 w-4" />
-                {t('navigation.settings')}
+                Settings
               </NavLink>
               
               <button
@@ -148,7 +145,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 className="w-full group flex items-center px-2 py-2 text-sm font-medium text-red-600 rounded-md hover:bg-red-50"
               >
                 <LogOut className="mr-3 h-4 w-4" />
-                {t('auth.logout')}
+                Logout
               </button>
             </div>
           </div>
