@@ -82,7 +82,7 @@ export const StoresPage: React.FC = () => {
       toast.success('Store created successfully');
       handleCloseModal();
     },
-    onError: (e: any) => toast.error(e?.response?.data?.DDMS_data || 'Failed to create store'),
+    onError: (e: any) => toast.error(e?.response?.data?.DDMS_error_code || e?.message || 'Failed to create store'),
   });
 
   const updateMutation = useMutation({
@@ -106,7 +106,7 @@ export const StoresPage: React.FC = () => {
       toast.success('Store updated successfully');
       handleCloseModal();
     },
-    onError: (e: any) => toast.error(e?.response?.data?.DDMS_data || 'Failed to update store'),
+    onError: (e: any) => toast.error(e?.response?.data?.DDMS_error_code || e?.message || 'Failed to update store'),
   });
 
   const deleteMutation = useMutation({
@@ -153,9 +153,9 @@ export const StoresPage: React.FC = () => {
       subscriptionStatus: store.subscriptionStatus,
       subscriptionExpiresAt: store.subscriptionExpiresAt,
       // Populate admin details from API response
-      adminName: store.admin?.name || '',
-      adminMobile: store.admin?.mobile || '',
-      adminEmail: store.admin?.email || '',
+      adminName: store.admin_name || '',
+      adminMobile: store.admin_mobile || '',
+      adminEmail: store.admin_email || '',
       adminPassword: '', // Don't pre-fill password for security
     });
     setShowModal(true);
@@ -330,7 +330,6 @@ export const StoresPage: React.FC = () => {
               required
             >
               <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Inactive</option>
               <option value="EXPIRED">Expired</option>
               <option value="SUSPENDED">Suspended</option>
             </Select>
@@ -443,7 +442,6 @@ export const StoresPage: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, subscriptionStatus: e.target.value })}
               >
                 <option value="ACTIVE">Active</option>
-                <option value="INACTIVE">Inactive</option>
                 <option value="EXPIRED">Expired</option>
                 <option value="SUSPENDED">Suspended</option>
               </Select>
