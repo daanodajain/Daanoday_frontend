@@ -11,26 +11,26 @@ import toast from 'react-hot-toast';
 
 export const DashboardPage: React.FC = () => {
   const { t } = useTranslation();
-  const { currentStore } = useAuthStore();
+  const { currentStore, isSuperAdmin } = useAuthStore();
   const { canApprove } = usePermissions();
   const queryClient = useQueryClient();
 
   const { data: statsData, isLoading } = useQuery({
     queryKey: ['dashboard-stats', currentStore?.id],
     queryFn: () => apiService.getDashboardStats(),
-    enabled: !!currentStore,
+    enabled: !!currentStore || isSuperAdmin,
   });
 
   const { data: recentData } = useQuery({
     queryKey: ['dashboard-recent', currentStore?.id],
     queryFn: () => apiService.getRecentReceipts(5),
-    enabled: !!currentStore,
+    enabled: !!currentStore || isSuperAdmin,
   });
 
   const { data: pendingData } = useQuery({
     queryKey: ['receipts-pending', currentStore?.id],
     queryFn: () => apiService.getReceipts({ state: 'PENDING_APPROVAL' }),
-    enabled: !!currentStore,
+    enabled: !!currentStore || isSuperAdmin,
   });
 
   const approveMutation = useMutation({

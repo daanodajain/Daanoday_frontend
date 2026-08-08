@@ -9,6 +9,7 @@ interface AuthState {
   currentStore: Store | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isSuperAdmin: boolean;
   // Session Management
   isSessionWarningVisible: boolean;
   remainingTime: number;
@@ -40,6 +41,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       currentStore: null,
       isAuthenticated: false,
       isLoading: false,
+      isSuperAdmin: false,
       // Session Management
       isSessionWarningVisible: false,
       remainingTime: 0,
@@ -47,13 +49,15 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       isSessionActive: false,
 
       setAuth: (user, token, refreshToken) => {
+        const isSuperAdmin = user.roles?.some((r: any) => r.name === 'SUPER_ADMIN') ?? false;
         set({
           user,
           token,
           refreshToken,
           isAuthenticated: true,
+          isSuperAdmin,
+          // SUPER_ADMIN has no store — set null, dashboard handles it
           currentStore: user.stores?.[0] || null,
-          // Reset session state on login
           isSessionWarningVisible: false,
           remainingTime: 0,
           lastActivityTime: Date.now(),
@@ -75,14 +79,13 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         } catch (error) {
           console.error('Logout API call failed:', error);
         } finally {
-          // Clear all state
           set({
             user: null,
             token: null,
             refreshToken: null,
             currentStore: null,
             isAuthenticated: false,
-            // Reset session state on logout
+            isSuperAdmin: false,
             isSessionWarningVisible: false,
             remainingTime: 0,
             lastActivityTime: Date.now(),
@@ -93,38 +96,22 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         }
       },
 
-      setLoading: (loading) => {
-        set({ isLoading: loading });
-      },
+      setLoading: (loading) => set({ isLoading: loading }),
 
       updateUser: (userData) => {
         const { user } = get();
-        if (user) {
-          set({ user: { ...user, ...userData } });
-        }
+        if (user) set({ user: { ...user, ...userData } });
       },
 
-      // Session Management Actions
-      setSessionWarningVisible: (visible) => {
-        set({ isSessionWarningVisible: visible });
-      },
-
-      setRemainingTime: (time) => {
-        set({ remainingTime: time });
-      },
-
-      setLastActivityTime: (time) => {
-        set({ lastActivityTime: time });
-      },
-
-      setSessionActive: (active) => {
-        set({ isSessionActive: active });
-      },
+      setSessionWarningVisible: (visible) => set({ isSessionWarningVisible: visible }),
+      setRemainingTime: (time) => set({ remainingTime: time }),
+      setLastActivityTime: (time) => set({ lastActivityTime: time }),
+      setSessionActive: (active) => set({ isSessionActive: active }),
 
       resetSession: () => {
         set({
           isSessionWarningVisible: false,
-          remainingTime: 15 * 60 * 1000, // 15 minutes
+          remainingTime: 15 * 60 * 1000,
           lastActivityTime: Date.now(),
           isSessionActive: true,
         });
@@ -146,6 +133,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         refreshToken: state.refreshToken,
         currentStore: state.currentStore,
         isAuthenticated: state.isAuthenticated,
+        isSuperAdmin: state.isSuperAdmin,
       }),
     }
   )

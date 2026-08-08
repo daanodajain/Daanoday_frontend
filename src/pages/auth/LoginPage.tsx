@@ -10,7 +10,7 @@ import { apiService } from '@/services/api';
 import { useAuthStore } from '@/store/authStore';
 
 interface LoginForm {
-  identifier: string; // email or mobile
+  identifier: string;
   password: string;
 }
 
@@ -23,20 +23,9 @@ export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
   const [requirePasswordChange, setRequirePasswordChange] = useState(false);
-  const [authToken, setAuthToken] = useState('');
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginForm>();
-
-  const {
-    register: regCP,
-    handleSubmit: handleCP,
-    formState: { errors: errorsCP },
-    watch,
-  } = useForm<ChangePasswordForm>();
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>();
+  const { register: regCP, handleSubmit: handleCP, formState: { errors: errorsCP }, watch } = useForm<ChangePasswordForm>();
 
   const loginMutation = useMutation({
     mutationFn: async (data: LoginForm) => {
@@ -45,23 +34,26 @@ export const LoginPage: React.FC = () => {
     },
     onSuccess: (data) => {
       if (data?.status === 'SUCCESS') {
-        const { user, token, refreshToken, requirePasswordChange: rpc } = data.DDMS_data;
+        const { user, token, refreshToken, roles, stores, requirePasswordChange: rpc } = data.DDMS_data;
+
+        // Merge roles and stores into user object
+        const authUser = { ...user, roles: roles || [], stores: stores || [] };
+
         if (rpc) {
-          // First login — show change password form
-          setAuthToken(token);
-          setAuth(user, token, refreshToken);
+          setAuth(authUser, token, refreshToken);
           setRequirePasswordChange(true);
           return;
         }
-        setAuth(user, token, refreshToken);
+
+        setAuth(authUser, token, refreshToken);
         toast.success('Login successful!');
         navigate('/dashboard');
       } else {
-        toast.error(data?.DDMS_data?.message || 'Login failed');
+        toast.error('Login failed');
       }
     },
     onError: (error: any) => {
-      const msg = error?.response?.data?.DDMS_data || error?.message || 'Login failed';
+      const msg = error?.response?.data?.DDMS_error_code || error?.message || 'Login failed';
       toast.error(typeof msg === 'string' ? msg : 'Invalid credentials');
     },
   });
@@ -73,9 +65,10 @@ export const LoginPage: React.FC = () => {
     },
     onSuccess: (data) => {
       if (data?.status === 'SUCCESS') {
-        const { user, token, refreshToken } = data.DDMS_data;
-        setAuth(user, token, refreshToken);
-        toast.success('Password set successfully! Welcome.');
+        const { user, token, refreshToken, roles, stores } = data.DDMS_data;
+        const authUser = { ...user, roles: roles || [], stores: stores || [] };
+        setAuth(authUser, token, refreshToken);
+        toast.success('Password set! Welcome.');
         navigate('/dashboard');
       } else {
         toast.error('Failed to set password');
@@ -97,9 +90,7 @@ export const LoginPage: React.FC = () => {
           <h2 className="text-xl font-semibold text-secondary-900">
             {requirePasswordChange ? 'Set New Password' : 'Login'}
           </h2>
-          <p className="mt-2 text-sm text-secondary-600">
-            Temple Donation Management System
-          </p>
+          <p className="mt-2 text-sm text-secondary-600">Temple Donation Management System</p>
         </div>
 
         <Card className="p-8">
@@ -108,9 +99,7 @@ export const LoginPage: React.FC = () => {
               <Input
                 label="Email or Mobile Number"
                 type="text"
-                {...register('identifier', {
-                  required: 'Email or mobile number is required',
-                })}
+                {...register('identifier', { required: 'Email or mobile number is required' })}
                 error={errors.identifier?.message}
                 placeholder="Enter email or mobile number"
                 autoComplete="username"
@@ -126,21 +115,15 @@ export const LoginPage: React.FC = () => {
                 placeholder="Enter your password"
                 autoComplete="current-password"
               />
-              <Button
-                type="submit"
-                className="w-full"
-                loading={loginMutation.isPending}
-              >
+              <Button type="submit" className="w-full" loading={loginMutation.isPending}>
                 Login
               </Button>
             </form>
           ) : (
             <form onSubmit={handleCP(onChangePassword)} className="space-y-6">
-              <div className="text-center">
-                <p className="text-sm text-secondary-600">
-                  Welcome! Please set a new password to continue.
-                </p>
-              </div>
+              <p className="text-sm text-secondary-600 text-center">
+                Welcome! Please set a new password to continue.
+              </p>
               <Input
                 label="New Password"
                 type="password"
@@ -163,11 +146,7 @@ export const LoginPage: React.FC = () => {
                 placeholder="Confirm new password"
                 autoComplete="new-password"
               />
-              <Button
-                type="submit"
-                className="w-full"
-                loading={changePasswordMutation.isPending}
-              >
+              <Button type="submit" className="w-full" loading={changePasswordMutation.isPending}>
                 Set Password & Continue
               </Button>
             </form>
