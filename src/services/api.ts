@@ -7,7 +7,7 @@ class ApiService {
 
   constructor() {
     this.api = axios.create({
-      baseURL: import.meta.env.VITE_API_BASE_URL || 'https://backend-production-a53c.up.railway.app',
+      baseURL: import.meta.env.VITE_API_BASE_URL || import.meta.env.NEXT_PUBLIC_API_URL || 'https://ddback.daanoday.com/api',
       headers: {
       'Content-Type': 'application/json'
     }
@@ -60,7 +60,7 @@ class ApiService {
           error.config._retry = true;
           try {
             const res = await axios.post<DDMSResponse>(
-              `${import.meta.env.VITE_API_BASE_URL || 'https://backend-production-a53c.up.railway.app'}/auth/refresh`,
+              `${import.meta.env.VITE_API_BASE_URL || import.meta.env.NEXT_PUBLIC_API_URL || 'https://ddback.daanoday.com/api'}/auth/refresh`,
               { refreshToken },
               { headers: { 'Content-Type': 'application/json' } }
             );
