@@ -100,7 +100,7 @@ export const ParticularsPage: React.FC = () => {
     }
   };
 
-  const filteredParticulars = particulars?.DDMS_data?.particulars?.filter((particular: any) =>
+  const filteredParticulars = (particulars?.DDMS_data || [])?.filter((particular: any) =>
     particular.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -123,7 +123,7 @@ export const ParticularsPage: React.FC = () => {
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle>Particulars ({particulars?.DDMS_data?.total || 0})</CardTitle>
+            <CardTitle>Particulars ({filteredParticulars?.length || 0})</CardTitle>
             <div className="flex gap-2">
               <Select
                 value={filterType}

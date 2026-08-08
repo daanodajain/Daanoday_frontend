@@ -23,7 +23,7 @@ interface Particular { particularId: string; particularName: string; amount: num
 export const ChallansPage: React.FC = () => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const { canCreate } = usePermissions();
+  const { canCreate, canApprove } = usePermissions();
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedChallan, setSelectedChallan] = useState<Challan | null>(null);
@@ -57,6 +57,24 @@ export const ChallansPage: React.FC = () => {
       handleCloseCreate();
     },
     onError: (e: any) => toast.error(e.message || 'Failed to create challan'),
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: (id: string) => apiService.approveChallan(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['challans'] });
+      toast.success('Challan marked as paid ✅');
+    },
+    onError: (e: any) => toast.error(e.message || 'Failed to approve challan'),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (id: string) => apiService.rejectChallan(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['challans'] });
+      toast.success('Challan cancelled');
+    },
+    onError: (e: any) => toast.error(e.message || 'Failed to reject challan'),
   });
 
   const changeRequestMutation = useMutation({
@@ -177,6 +195,20 @@ export const ChallansPage: React.FC = () => {
                         <Button variant="ghost" size="sm" onClick={() => setSelectedChallan(challan)}>
                           <Eye className="w-4 h-4" />
                         </Button>
+                        {challan.status === 'UNPAID' && canApprove('challans') && (
+                          <>
+                            <Button variant="ghost" size="sm" className="text-green-600"
+                              onClick={() => approveMutation.mutate(String(challan.id))}
+                              disabled={approveMutation.isPending}>
+                              ✓
+                            </Button>
+                            <Button variant="ghost" size="sm" className="text-red-600"
+                              onClick={() => rejectMutation.mutate(String(challan.id))}
+                              disabled={rejectMutation.isPending}>
+                              ✗
+                            </Button>
+                          </>
+                        )}
                         {challan.status !== 'CANCELLED' && (
                           <>
                             <Button variant="ghost" size="sm" className="text-blue-600"

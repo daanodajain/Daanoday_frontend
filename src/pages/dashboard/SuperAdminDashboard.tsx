@@ -15,7 +15,7 @@ export const SuperAdminDashboard: React.FC = () => {
     queryFn: () => apiService.getSuperAdminSubscriptions(),
   });
 
-  const stores: any[] = storesData?.DDMS_data || [];
+  const stores: any[] = storesData?.DDMS_data?.stores || storesData?.DDMS_data || [];
   const subs: any[] = subsData?.DDMS_data || [];
 
   const activeStores = stores.filter(s => s.subscription_status === 'ACTIVE').length;

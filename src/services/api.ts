@@ -290,6 +290,16 @@ class ApiService {
     });
   }
 
+  async approveChallan(challanId: string) {
+    const response = await this.api.post<DDMSResponse>(`/challans/${challanId}/approve`);
+    return response.data;
+  }
+
+  async rejectChallan(challanId: string, note?: string) {
+    const response = await this.api.post<DDMSResponse>(`/challans/${challanId}/reject`, { note });
+    return response.data;
+  }
+
   // Transaction Management
   async getTransactions(filters?: any) {
     const response = await this.api.get<DDMSResponse>('/transactions', { params: filters });
