@@ -54,6 +54,10 @@ export interface StoreSettings {
   enable_80g: boolean;
   auto_send_receipt_sms: boolean;
   auto_send_receipt_email: boolean;
+  // Store-admin configured session behavior. Null = not configured yet =
+  // auto-logout/inactivity-lock are OFF for this store (no hardcoded default).
+  session_timeout_minutes: number | null;
+  inactivity_lock_minutes: number | null;
 }
 
 // ── User ──────────────────────────────────────────────────────

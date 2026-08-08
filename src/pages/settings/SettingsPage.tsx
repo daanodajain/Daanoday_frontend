@@ -22,6 +22,9 @@ interface StoreSettings {
   emailSmtpPort: number;
   emailUsername: string;
   emailPassword: string;
+  // Store-admin configured session behavior. Null = not configured = OFF.
+  sessionTimeoutMinutes: number | null;
+  inactivityLockMinutes: number | null;
 }
 
 interface StoreInfo {
@@ -52,7 +55,9 @@ export const SettingsPage: React.FC = () => {
     emailSmtpHost: '',
     emailSmtpPort: 587,
     emailUsername: '',
-    emailPassword: ''
+    emailPassword: '',
+    sessionTimeoutMinutes: null,
+    inactivityLockMinutes: null,
   });
   const [storeInfo, setStoreInfo] = useState<StoreInfo>({
     id: 0,
@@ -79,8 +84,24 @@ export const SettingsPage: React.FC = () => {
   const fetchSettings = async () => {
     try {
       const response = await apiService.get('/store-settings');
-      if (response.DDMS_data) {
-        setSettings(response.DDMS_data);
+      const d = response.DDMS_data;
+      if (d) {
+        // Backend returns raw DB columns (snake_case); state uses camelCase.
+        // Map explicitly instead of assigning directly, or every field here
+        // silently comes back undefined after load.
+        setSettings((prev) => ({
+          ...prev,
+          receiptPrefix: d.receipt_prefix ?? prev.receiptPrefix,
+          challanPrefix: d.challan_prefix ?? prev.challanPrefix,
+          autoApproveCash: d.auto_approve_cash ?? prev.autoApproveCash,
+          cashApprovalLimit: d.cash_approval_limit ?? prev.cashApprovalLimit,
+          smsEnabled: d.sms_enabled ?? prev.smsEnabled,
+          emailEnabled: d.email_enabled ?? prev.emailEnabled,
+          razorpayKeyId: d.razorpay_key_id ?? prev.razorpayKeyId,
+          razorpayKeySecret: d.razorpay_key_secret ?? prev.razorpayKeySecret,
+          sessionTimeoutMinutes: d.session_timeout_minutes ?? null,
+          inactivityLockMinutes: d.inactivity_lock_minutes ?? null,
+        }));
       }
     } catch (error) {
       console.error('Failed to fetch settings:', error);
@@ -240,11 +261,77 @@ export const SettingsPage: React.FC = () => {
             <label className="block text-sm font-medium mb-1">Cash Approval Limit</label>
             <Input
               type="number"
-              value={settings.cashApprovalLimit}
-              onChange={(e) => setSettings({...settings, cashApprovalLimit: Number(e.target.value)})}
+              value={settings.cashApprovalLimit === 0 ? '' : settings.cashApprovalLimit}
+              onChange={(e) => {
+                const raw = e.target.value;
+                setSettings({ ...settings, cashApprovalLimit: raw === '' ? 0 : Number(raw) });
+              }}
+              onFocus={(e) => e.target.select()}
               placeholder="0"
             />
           </div>
+        </div>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Session Security</CardTitle>
+        </CardHeader>
+        <div className="p-4 space-y-4">
+          <p className="text-sm text-secondary-600">
+            Leave a field blank to keep that behavior turned off. Nothing is enabled by default —
+            set these to control how long staff can stay idle before they're locked out.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Lock screen after inactivity (minutes)
+              </label>
+              <Input
+                type="number"
+                min={1}
+                value={settings.inactivityLockMinutes ?? ''}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  setSettings({
+                    ...settings,
+                    inactivityLockMinutes: raw === '' ? null : Number(raw),
+                  });
+                }}
+                placeholder="Off"
+              />
+              <p className="mt-1 text-xs text-secondary-500">
+                User must re-enter their password to resume. Doesn't lose their place.
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Auto logout after inactivity (minutes)
+              </label>
+              <Input
+                type="number"
+                min={1}
+                value={settings.sessionTimeoutMinutes ?? ''}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  setSettings({
+                    ...settings,
+                    sessionTimeoutMinutes: raw === '' ? null : Number(raw),
+                  });
+                }}
+                placeholder="Off"
+              />
+              <p className="mt-1 text-xs text-secondary-500">
+                Full sign-out and local data clear. Must be longer than the lock time above.
+              </p>
+            </div>
+          </div>
+          {settings.inactivityLockMinutes && settings.sessionTimeoutMinutes &&
+            settings.inactivityLockMinutes >= settings.sessionTimeoutMinutes && (
+            <p className="text-sm text-red-600">
+              Auto-logout time must be greater than the lock time, or the lock will never trigger.
+            </p>
+          )}
         </div>
       </Card>
 

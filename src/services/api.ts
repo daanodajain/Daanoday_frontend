@@ -112,6 +112,11 @@ class ApiService {
     return response.data;
   }
 
+  async unlockSession(password: string) {
+    const response = await this.api.post<DDMSResponse>('/auth/unlock', { password });
+    return response.data;
+  }
+
   // Store Management
   async  getStores() {
     const response = await this.api.get<DDMSResponse>('/stores');
@@ -654,18 +659,16 @@ class ApiService {
     return await this.put('/user-profile', profileData);
   }
 
-  async changePassword(oldPassword: string, newPassword: string) {
+  // Renamed from changePassword to avoid colliding with the first-login
+  // changePassword(newPassword) above — a duplicate method name here was
+  // silently overwriting that one, breaking the first-login "set password" flow.
+  async changePasswordWithOldPassword(oldPassword: string, newPassword: string) {
     return await this.post('/user-profile/change-password', { oldPassword, newPassword });
   }
 
   // Store Context
   async switchStore(storeId: string) {
     return await this.post(`/store-context/switch/${storeId}`);
-  }
-
-  // Challan Approval
-  async rejectChallan(challanId: string) {
-    return await this.post(`/challans/${challanId}/reject`);
   }
 
   // User toggle status

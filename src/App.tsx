@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { Layout } from '@/components/layout/Layout';
 import { LoginPage } from '@/pages/auth/LoginPage';
@@ -25,8 +26,9 @@ import { ChangeRequestsPage } from '@/pages/change-requests/ChangeRequestsPage';
 import { SuperAdminSubscriptionsPage } from '@/pages/super-admin/SuperAdminSubscriptionsPage';
 import { SuperAdminSystemSettingsPage } from '@/pages/super-admin/SuperAdminSystemSettingsPage';
 import { useAuthStore } from '@/store/authStore';
-import { useSessionTimeout } from '@/hooks/useSessionTimeout';
-import { SessionTimeoutModal } from '@/components/session/SessionTimeoutModal';
+import { apiService } from '@/services/api';
+import { useInactivityManager } from '@/hooks/useInactivityManager';
+import { LockScreen } from '@/components/session/LockScreen';
 import '@/i18n';
 
 const queryClient = new QueryClient({
@@ -46,30 +48,33 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 const SessionManager: React.FC = () => {
-  const { isAuthenticated, isSessionWarningVisible, remainingTime, logout, extendSession } = useAuthStore();
-  
-  useSessionTimeout({
-    enabled: isAuthenticated,
-    timeoutDuration: 30 * 60 * 1000, // 30 minutes
-    warningDuration: 2 * 60 * 1000,
-    countdownInterval: 1000,
-    onSessionExpired: () => {
-      logout();
-      window.location.href = '/login';
-    },
+  const { isAuthenticated, currentStore, isLocked, unlockSession, setSessionTimeoutConfig } = useAuthStore();
+
+  // Load this store's configured session behavior. Store admin sets these in Settings;
+  // if never configured, both stay null and auto-logout/lock are simply OFF.
+  const { data: settingsRes } = useQuery({
+    queryKey: ['store-settings-session', currentStore?.id],
+    queryFn: () => apiService.getStoreSettings(),
+    enabled: isAuthenticated && !!currentStore?.id,
+    staleTime: 60 * 1000,
   });
 
-  return (
-    <>
-      {isSessionWarningVisible && (
-        <SessionTimeoutModal
-          remainingTime={remainingTime}
-          onExtend={() => extendSession()}
-          onLogout={() => logout()}
-        />
-      )}
-    </>
-  );
+  useEffect(() => {
+    const s = settingsRes?.DDMS_data;
+    if (s) {
+      setSessionTimeoutConfig(
+        s.session_timeout_minutes ?? null,
+        s.inactivity_lock_minutes ?? null
+      );
+    }
+  }, [settingsRes, setSessionTimeoutConfig]);
+
+  useInactivityManager();
+
+  if (isLocked) {
+    return <LockScreen onUnlock={unlockSession} />;
+  }
+  return null;
 };
 
 const AppRoutes: React.FC = () => {

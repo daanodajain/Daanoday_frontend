@@ -15,6 +15,11 @@ interface AuthState {
   remainingTime: number;
   lastActivityTime: number;
   isSessionActive: boolean;
+  // Inactivity lock (separate from full logout) — screen locks, user re-enters
+  // password to resume without losing their place. Store-admin configured.
+  isLocked: boolean;
+  sessionTimeoutMinutes: number | null;
+  inactivityLockMinutes: number | null;
 }
 
 interface AuthActions {
@@ -30,6 +35,9 @@ interface AuthActions {
   setSessionActive: (active: boolean) => void;
   resetSession: () => void;
   extendSession: () => void;
+  lockSession: () => void;
+  unlockSession: () => void;
+  setSessionTimeoutConfig: (sessionTimeoutMinutes: number | null, inactivityLockMinutes: number | null) => void;
 }
 
 export const useAuthStore = create<AuthState & AuthActions>()(
@@ -47,6 +55,9 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       remainingTime: 0,
       lastActivityTime: Date.now(),
       isSessionActive: false,
+      isLocked: false,
+      sessionTimeoutMinutes: null,
+      inactivityLockMinutes: null,
 
       setAuth: (user, token, refreshToken) => {
         const isSuperAdmin = user.roles?.some((r: any) => r.name === 'SUPER_ADMIN') ?? false;
@@ -62,6 +73,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           remainingTime: 0,
           lastActivityTime: Date.now(),
           isSessionActive: true,
+          isLocked: false,
         });
       },
 
@@ -90,6 +102,9 @@ export const useAuthStore = create<AuthState & AuthActions>()(
             remainingTime: 0,
             lastActivityTime: Date.now(),
             isSessionActive: false,
+            isLocked: false,
+            sessionTimeoutMinutes: null,
+            inactivityLockMinutes: null,
           });
           localStorage.removeItem('auth-storage');
           window.location.href = '/login';
@@ -124,6 +139,11 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           isSessionActive: true,
         });
       },
+
+      lockSession: () => set({ isLocked: true }),
+      unlockSession: () => set({ isLocked: false, lastActivityTime: Date.now() }),
+      setSessionTimeoutConfig: (sessionTimeoutMinutes, inactivityLockMinutes) =>
+        set({ sessionTimeoutMinutes, inactivityLockMinutes }),
     }),
     {
       name: 'auth-storage',
