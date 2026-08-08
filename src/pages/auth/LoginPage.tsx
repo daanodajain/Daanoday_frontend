@@ -109,7 +109,6 @@ export const LoginPage: React.FC = () => {
                 type="password"
                 {...register('password', {
                   required: 'Password is required',
-                  minLength: { value: 6, message: 'Minimum 6 characters' },
                 })}
                 error={errors.password?.message}
                 placeholder="Enter your password"

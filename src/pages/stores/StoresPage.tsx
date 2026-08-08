@@ -217,6 +217,11 @@ export const StoresPage: React.FC = () => {
 
       {isLoading ? (
         <div className="text-center py-8">Loading...</div>
+      ) : stores.length === 0 ? (
+        <div className="text-center py-16 text-secondary-500">
+          <p className="text-lg font-medium mb-2">No stores yet</p>
+          <p className="text-sm">Click "Add Store" to create your first store.</p>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.isArray(stores) && stores.map((store: any) => (
