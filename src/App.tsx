@@ -30,6 +30,7 @@ import { useAuthStore } from '@/store/authStore';
 import { apiService } from '@/services/api';
 import { useInactivityManager } from '@/hooks/useInactivityManager';
 import { LockScreen } from '@/components/session/LockScreen';
+import { InstallPrompt } from '@/components/common/InstallPrompt';
 import '@/i18n';
 
 const queryClient = new QueryClient({
@@ -117,6 +118,7 @@ function App() {
         <div className="App">
           <SessionManager />
           <AppRoutes />
+          <InstallPrompt />
           <Toaster
             position="top-right"
             toastOptions={{
