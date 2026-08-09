@@ -25,6 +25,7 @@ import { AuditLogsPage } from '@/pages/audit/AuditLogsPage';
 import { ChangeRequestsPage } from '@/pages/change-requests/ChangeRequestsPage';
 import { SuperAdminSubscriptionsPage } from '@/pages/super-admin/SuperAdminSubscriptionsPage';
 import { SuperAdminSystemSettingsPage } from '@/pages/super-admin/SuperAdminSystemSettingsPage';
+import { RequireStore } from '@/components/common/RequireStore';
 import { useAuthStore } from '@/store/authStore';
 import { apiService } from '@/services/api';
 import { useInactivityManager } from '@/hooks/useInactivityManager';
@@ -87,20 +88,20 @@ const AppRoutes: React.FC = () => {
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="stores" element={<StoresPage />} />
-        <Route path="users" element={<UsersPage />} />
-        <Route path="roles" element={<RolesPage />} />
-        <Route path="customers" element={<CustomersPage />} />
-        <Route path="suppliers" element={<SuppliersPage />} />
-        <Route path="particulars" element={<ParticularsPage />} />
-        <Route path="receipts" element={<ReceiptsPage />} />
-        <Route path="challans" element={<ChallansPage />} />
-        <Route path="transactions" element={<TransactionsPage />} />
-        <Route path="reports" element={<ReportsPage />} />
-        <Route path="notifications" element={<NotificationsPage />} />
-        <Route path="news" element={<NewsPage />} />
-        <Route path="settings" element={<SettingsPage />} />
-        <Route path="audit" element={<AuditLogsPage />} />
-        <Route path="change-requests" element={<ChangeRequestsPage />} />
+        <Route path="users" element={<RequireStore><UsersPage /></RequireStore>} />
+        <Route path="roles" element={<RequireStore><RolesPage /></RequireStore>} />
+        <Route path="customers" element={<RequireStore><CustomersPage /></RequireStore>} />
+        <Route path="suppliers" element={<RequireStore><SuppliersPage /></RequireStore>} />
+        <Route path="particulars" element={<RequireStore><ParticularsPage /></RequireStore>} />
+        <Route path="receipts" element={<RequireStore><ReceiptsPage /></RequireStore>} />
+        <Route path="challans" element={<RequireStore><ChallansPage /></RequireStore>} />
+        <Route path="transactions" element={<RequireStore><TransactionsPage /></RequireStore>} />
+        <Route path="reports" element={<RequireStore><ReportsPage /></RequireStore>} />
+        <Route path="notifications" element={<RequireStore><NotificationsPage /></RequireStore>} />
+        <Route path="news" element={<RequireStore><NewsPage /></RequireStore>} />
+        <Route path="settings" element={<RequireStore><SettingsPage /></RequireStore>} />
+        <Route path="audit" element={<RequireStore><AuditLogsPage /></RequireStore>} />
+        <Route path="change-requests" element={<RequireStore><ChangeRequestsPage /></RequireStore>} />
         <Route path="super-admin/subscriptions" element={<SuperAdminSubscriptionsPage />} />
         <Route path="super-admin/settings" element={<SuperAdminSystemSettingsPage />} />
       </Route>
