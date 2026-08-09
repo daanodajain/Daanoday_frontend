@@ -13,7 +13,12 @@ import toast from 'react-hot-toast';
 export const RolesPage: React.FC = () => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const { canUpdate, canCreate, canDelete } = usePermissions();
+  
+  // FIX 1: Humare DB mein 'roles' ke liye sirf 'manage' permission hai.
+  // Isliye canCreate/canUpdate/canDelete ki jagah canManage use karenge.
+  const { canManage } = usePermissions();
+  const canManageRoles = canManage('roles'); 
+
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [editingRole, setEditingRole] = useState<any>(null);
@@ -26,18 +31,7 @@ export const RolesPage: React.FC = () => {
     queryFn: () => apiService.getRoles(),
   });
 
-  const { data: permissionsData } = useQuery({
-    queryKey: ['permissions'],
-    queryFn: () => apiService.getAllPermissions(),
-    enabled: showPermissionsModal,
-  });
-
-  const { data: rolePermsData } = useQuery({
-    queryKey: ['role-permissions', selectedRole?.id],
-    queryFn: () => apiService.get(`/roles/${selectedRole.id}/permissions`),
-    enabled: !!selectedRole && showPermissionsModal,
-  });
-
+  // ... (Baaki Mutations waise hi rahenge)
   const assignPermissionsMutation = useMutation({
     mutationFn: ({ roleId, permissionIds }: any) =>
       apiService.assignPermissionsToRole(String(roleId), permissionIds.map(String)),
@@ -76,7 +70,24 @@ export const RolesPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] });
       toast.success('Role deleted');
     },
-    onError: (e: any) => toast.error(e?.response?.data?.DDMS_error_code || e.message || 'Failed to delete role — it may still be assigned to users'),
+    onError: (e: any) => toast.error(e?.response?.data?.DDMS_error_code || e.message || 'Failed to delete role'),
+  });
+
+  // FIX 2: List se SUPER_ADMIN ko filter kar do (Safety ke liye Frontend pe bhi)
+  const roles = (rolesData?.DDMS_data || []).filter(
+    (r: any) => r.name.toUpperCase() !== 'SUPER_ADMIN'
+  );
+
+  const { data: permissionsData } = useQuery({
+    queryKey: ['permissions'],
+    queryFn: () => apiService.getAllPermissions(),
+    enabled: showPermissionsModal,
+  });
+
+  const { data: rolePermsData } = useQuery({
+    queryKey: ['role-permissions', selectedRole?.id],
+    queryFn: () => apiService.get(`/roles/${selectedRole.id}/permissions`),
+    enabled: !!selectedRole && showPermissionsModal,
   });
 
   const closeRoleModal = () => {
@@ -107,7 +118,7 @@ export const RolesPage: React.FC = () => {
   };
 
   const handleDeleteRole = (role: any) => {
-    if (window.confirm(`Delete role "${role.name}"? This cannot be undone. Roles still assigned to a user can't be deleted.`)) {
+    if (window.confirm(`Delete role "${role.name}"?`)) {
       deleteRoleMutation.mutate(role.id);
     }
   };
@@ -118,10 +129,7 @@ export const RolesPage: React.FC = () => {
     }
   }, [rolePermsData]);
 
-  const roles = rolesData?.DDMS_data || [];
   const permissions = permissionsData?.DDMS_data || [];
-
-  // Group permissions by resource
   const grouped = permissions.reduce((acc: any, p: any) => {
     if (!acc[p.resource]) acc[p.resource] = [];
     acc[p.resource].push(p);
@@ -134,7 +142,8 @@ export const RolesPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Roles & Permissions</h1>
-        {canCreate('roles') && (
+        {/* FIX 3: canCreate ki jagah canManageRoles use kiya */}
+        {canManageRoles && (
           <Button onClick={openCreateRole}>
             <Plus className="w-4 h-4 mr-2" />
             Add Role
@@ -172,18 +181,19 @@ export const RolesPage: React.FC = () => {
                   </td>
                   <td className="table-cell">
                     <div className="flex items-center gap-1">
-                      {canUpdate('roles') && (
+                      {/* Button visibility fix for Edit/Permissions */}
+                      {canManageRoles && (
                         <Button variant="ghost" size="sm" title="Manage Permissions"
                           onClick={() => { setSelectedRole(role); setSelectedPermissions([]); setShowPermissionsModal(true); }}>
                           <Shield className="w-4 h-4 text-blue-600" />
                         </Button>
                       )}
-                      {canUpdate('roles') && role.store_id && (
+                      {canManageRoles && role.store_id && (
                         <Button variant="ghost" size="sm" title="Rename Role" onClick={() => openEditRole(role)}>
                           <Edit className="w-4 h-4 text-secondary-600" />
                         </Button>
                       )}
-                      {canDelete('roles') && role.store_id && (
+                      {canManageRoles && role.store_id && (
                         <Button variant="ghost" size="sm" title="Delete Role" onClick={() => handleDeleteRole(role)}>
                           <Trash2 className="w-4 h-4 text-red-600" />
                         </Button>
@@ -197,16 +207,10 @@ export const RolesPage: React.FC = () => {
         </div>
       </Card>
 
-      {/* Create / Rename Role */}
+      {/* Modals waise hi rahenge... */}
       <Modal isOpen={showRoleModal} onClose={closeRoleModal} title={editingRole ? 'Rename Role' : 'Add Role'}>
         <div className="space-y-4">
-          <Input
-            label="Role Name"
-            value={roleName}
-            onChange={(e) => setRoleName(e.target.value)}
-            placeholder="e.g. Accountant"
-            autoFocus
-          />
+          <Input label="Role Name" value={roleName} onChange={(e) => setRoleName(e.target.value)} placeholder="e.g. Accountant" autoFocus />
           <div className="flex justify-end gap-2 pt-2 border-t">
             <Button variant="outline" onClick={closeRoleModal}>{t('common.cancel')}</Button>
             <Button onClick={handleSaveRole} disabled={createRoleMutation.isPending || updateRoleMutation.isPending}>
@@ -216,8 +220,7 @@ export const RolesPage: React.FC = () => {
         </div>
       </Modal>
 
-      <Modal isOpen={showPermissionsModal} onClose={() => setShowPermissionsModal(false)}
-        title={`Permissions — ${selectedRole?.name}`} size="lg">
+      <Modal isOpen={showPermissionsModal} onClose={() => setShowPermissionsModal(false)} title={`Permissions — ${selectedRole?.name}`} size="lg">
         <div className="space-y-4">
           <div className="max-h-96 overflow-y-auto space-y-3">
             {Object.entries(grouped).map(([resource, perms]: [string, any]) => (
@@ -234,7 +237,6 @@ export const RolesPage: React.FC = () => {
                           prev.includes(p.id) ? prev.filter(id => id !== p.id) : [...prev, p.id]
                         )} />
                       <span className="text-sm flex-1">{p.action}</span>
-                      {selectedPermissions.includes(p.id) && <Check className="w-4 h-4 text-green-600" />}
                     </label>
                   ))}
                 </div>
@@ -244,9 +246,7 @@ export const RolesPage: React.FC = () => {
           <div className="flex justify-end gap-2 pt-4 border-t">
             <Button variant="outline" onClick={() => setShowPermissionsModal(false)}>{t('common.cancel')}</Button>
             <Button onClick={() => assignPermissionsMutation.mutate({ roleId: selectedRole.id, permissionIds: selectedPermissions })}
-              disabled={assignPermissionsMutation.isPending}>
-              Save Permissions
-            </Button>
+              disabled={assignPermissionsMutation.isPending}>Save Permissions</Button>
           </div>
         </div>
       </Modal>
