@@ -53,13 +53,13 @@ export const NotificationsPage: React.FC = () => {
     }
   };
 
-  const filteredNotifications = notifications?.DDMS_data?.notifications?.filter((notif: any) => {
-    if (filter === 'UNREAD') return !notif.readStatus;
-    if (filter === 'READ') return notif.readStatus;
+  const filteredNotifications = (notifications?.DDMS_data || [])?.filter((notif: any) => {
+    if (filter === 'UNREAD') return !notif.read_status;
+    if (filter === 'READ') return notif.read_status;
     return true;
   });
 
-  const unreadCount = notifications?.DDMS_data?.notifications?.filter((n: any) => !n.readStatus).length || 0;
+  const unreadCount = (notifications?.DDMS_data || [])?.filter((n: any) => !n.read_status).length || 0;
 
   if (isLoading) {
     return <div className="animate-pulse p-6">Loading notifications...</div>;
@@ -114,7 +114,7 @@ export const NotificationsPage: React.FC = () => {
             filteredNotifications?.map((notification: any) => (
               <div
                 key={notification.id}
-                className={`p-4 ${getNotificationBg(notification.type, notification.readStatus)}`}
+                className={`p-4 ${getNotificationBg(notification.type, notification.read_status)}`}
               >
                 <div className="flex items-start gap-4">
                   <div className="flex-shrink-0 mt-1">
@@ -123,18 +123,18 @@ export const NotificationsPage: React.FC = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
-                        <h3 className={`text-sm font-semibold ${!notification.readStatus ? 'text-secondary-900' : 'text-secondary-600'}`}>
+                        <h3 className={`text-sm font-semibold ${!notification.read_status ? 'text-secondary-900' : 'text-secondary-600'}`}>
                           {notification.title}
                         </h3>
                         <p className="text-sm text-secondary-600 mt-1">
                           {notification.message}
                         </p>
                         <p className="text-xs text-secondary-500 mt-2">
-                          {new Date(notification.createdAt).toLocaleString()}
+                          {new Date(notification.created_at).toLocaleString()}
                         </p>
                       </div>
                       <div className="flex gap-2 flex-shrink-0">
-                        {!notification.readStatus && (
+                        {!notification.read_status && (
                           <Button
                             variant="ghost"
                             size="sm"

@@ -90,7 +90,7 @@ export const NewsPage: React.FC = () => {
       title: news.title,
       content: news.content,
       type: news.type,
-      publishDate: news.publishDate,
+      publishDate: news.publish_date || news.publishDate,
       priority: news.priority,
       imageUrl: news.imageUrl || '',
     });
@@ -147,7 +147,7 @@ export const NewsPage: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {newsEvents?.DDMS_data?.newsEvents?.map((news: any) => (
+        {(newsEvents?.DDMS_data || [])?.map((news: any) => (
           <Card key={news.id}>
             <div className="p-6">
               <div className="flex justify-between items-start mb-4">
@@ -201,7 +201,7 @@ export const NewsPage: React.FC = () => {
         ))}
       </div>
 
-      {newsEvents?.DDMS_data?.newsEvents?.length === 0 && (
+      {(!newsEvents?.DDMS_data || newsEvents?.DDMS_data?.length === 0) && (
         <Card>
           <div className="p-12 text-center text-secondary-500">
             <Newspaper className="w-16 h-16 mx-auto mb-4 text-secondary-300" />

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
 import { Download, FileText, Calendar, TrendingUp, DollarSign, Users, Package } from 'lucide-react';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -14,6 +15,12 @@ export const ReportsPage: React.FC = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [isExporting, setIsExporting] = useState(false);
+
+  const { data: financialData } = useQuery({
+    queryKey: ['financial-report'],
+    queryFn: () => apiService.getFinancialReport(),
+  });
+  const fin = financialData?.DDMS_data;
 
   const handleExport = async (type: string) => {
     if (!startDate || !endDate) {
@@ -180,11 +187,11 @@ export const ReportsPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="text-center">
               <p className="text-sm text-secondary-600 mb-1">Total Receipts</p>
-              <p className="text-2xl font-bold text-green-600">-</p>
+              <p className="text-2xl font-bold text-green-600">{fin?.receipts?.count ?? "-"}</p>
             </div>
             <div className="text-center">
               <p className="text-sm text-secondary-600 mb-1">Total Challans</p>
-              <p className="text-2xl font-bold text-blue-600">-</p>
+              <p className="text-2xl font-bold text-blue-600">{fin?.challans?.count ?? "-"}</p>
             </div>
             <div className="text-center">
               <p className="text-sm text-secondary-600 mb-1">Total Customers</p>
@@ -192,7 +199,7 @@ export const ReportsPage: React.FC = () => {
             </div>
             <div className="text-center">
               <p className="text-sm text-secondary-600 mb-1">Net Balance</p>
-              <p className="text-2xl font-bold text-primary-600">-</p>
+              <p className="text-2xl font-bold text-primary-600">{fin ? `₹${Number(fin.net || 0).toLocaleString("en-IN")}` : "-"}</p>
             </div>
           </div>
         </div>

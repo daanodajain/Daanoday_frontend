@@ -27,7 +27,7 @@ export const AuditLogsPage: React.FC = () => {
     setLoading(true);
     try {
       const response = await apiService.getAuditLogs(filters);
-      if (response.DDMS_status === 'success') {
+      if (response.status === 'SUCCESS') {
         setLogs(response.DDMS_data || []);
       }
     } catch (error) {
