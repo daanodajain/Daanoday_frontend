@@ -34,6 +34,7 @@ export const UsersPage: React.FC = () => {
     enabled: showModal || showRoleModal,
   });
 
+  // ... (Baaki saari Mutations waise hi rahengi)
   const createMutation = useMutation({
     mutationFn: (data: any) => apiService.createUser(data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['users'] }); toast.success('User created successfully'); handleClose(); },
@@ -87,7 +88,12 @@ export const UsersPage: React.FC = () => {
   };
 
   const users = usersData?.DDMS_data || [];
-  const roles = rolesData?.DDMS_data || [];
+
+  // FIX: Dropdown se SUPER_ADMIN ko filter kar diya taaki Store Admin ise select na kar sake
+  const roles = (rolesData?.DDMS_data || []).filter(
+    (role: any) => role.name.toUpperCase() !== 'SUPER_ADMIN'
+  );
+
   const filtered = users.filter((u: any) =>
     u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.mobile?.includes(searchTerm) ||
@@ -107,6 +113,7 @@ export const UsersPage: React.FC = () => {
         )}
       </div>
 
+      {/* Users Table Card */}
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
@@ -192,22 +199,15 @@ export const UsersPage: React.FC = () => {
       {/* Create/Edit Modal */}
       <Modal isOpen={showModal} onClose={handleClose} title={editingUser ? 'Edit User' : 'Create User'}>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Input label="Full Name *" value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
-          <Input label="Mobile Number" type="tel" value={formData.mobile}
-            onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
-            placeholder="10-digit mobile number" />
-          <Input label="Email Address" type="email" value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            placeholder="user@example.com" />
+          <Input label="Full Name *" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
+          <Input label="Mobile Number" type="tel" value={formData.mobile} onChange={(e) => setFormData({ ...formData, mobile: e.target.value })} placeholder="10-digit mobile number" />
+          <Input label="Email Address" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="user@example.com" />
           {!editingUser && (
             <>
-              <Input label="Password *" type="password" value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="Minimum 6 characters" required />
-              <Select label="Assign Role" value={formData.roleId}
-                onChange={(e) => setFormData({ ...formData, roleId: e.target.value })}>
+              <Input label="Password *" type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} placeholder="Minimum 6 characters" required />
+              <Select label="Assign Role" value={formData.roleId} onChange={(e) => setFormData({ ...formData, roleId: e.target.value })}>
                 <option value="">Select role (optional)</option>
+                {/* Roles list filtered above is used here */}
                 {roles.map((role: any) => (
                   <option key={role.id} value={role.id}>{role.name}</option>
                 ))}
@@ -224,12 +224,12 @@ export const UsersPage: React.FC = () => {
       </Modal>
 
       {/* Assign Role Modal */}
-      <Modal isOpen={showRoleModal} onClose={() => setShowRoleModal(false)}
-        title={`Assign Role — ${selectedUser?.name}`}>
+      <Modal isOpen={showRoleModal} onClose={() => setShowRoleModal(false)} title={`Assign Role — ${selectedUser?.name}`}>
         <div className="space-y-4">
           <p className="text-sm text-secondary-600">Select a role for this user in the current store:</p>
           <Select label="Role *" value={selectedRoleId} onChange={(e) => setSelectedRoleId(e.target.value)}>
             <option value="">Select role</option>
+            {/* Roles list filtered above is used here too */}
             {roles.map((role: any) => (
               <option key={role.id} value={role.id}>{role.name}</option>
             ))}
