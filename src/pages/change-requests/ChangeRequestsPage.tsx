@@ -16,43 +16,108 @@ const statusColor: Record<string, string> = {
   REJECTED: 'text-red-700 bg-red-100',
 };
 
+// Parse old_data/new_data safely
+const parseData = (d: any) => {
+  if (!d) return null;
+  if (typeof d === 'object') return d;
+  try { return JSON.parse(d); } catch { return d; }
+};
+
+// Show only key fields from snapshot — not internal IDs
+const RECEIPT_DISPLAY_FIELDS: Record<string, string> = {
+  receipt_number: 'Receipt #',
+  total_amount: 'Amount',
+  payment_mode: 'Payment Mode',
+  receipt_date: 'Receipt Date',
+  payment_date: 'Payment Date',
+  is_due: 'Due Receipt',
+  remarks: 'Remarks',
+  receipt_state: 'State',
+  status: 'Status',
+};
+
+const CHALLAN_DISPLAY_FIELDS: Record<string, string> = {
+  challan_number: 'Challan #',
+  total_amount: 'Amount',
+  payment_mode: 'Payment Mode',
+  status: 'Status',
+};
+
+const DataDisplay = ({ data, entityType, label, bg = 'bg-secondary-50' }: { data: any; entityType: string; label: string; bg?: string }) => {
+  const parsed = parseData(data);
+  if (!parsed) return null;
+
+  const fields = entityType === 'RECEIPT' ? RECEIPT_DISPLAY_FIELDS : CHALLAN_DISPLAY_FIELDS;
+  const entries = Object.entries(fields)
+    .filter(([key]) => parsed[key] !== undefined && parsed[key] !== null)
+    .map(([key, label]) => {
+      let val = parsed[key];
+      if (key === 'total_amount') val = `₹${Number(val).toLocaleString('en-IN')}`;
+      if (key === 'is_due') val = val ? 'Yes' : 'No';
+      if ((key === 'receipt_date' || key === 'payment_date') && val) val = new Date(val).toLocaleDateString('en-IN');
+      return { label, val };
+    });
+
+  if (!entries.length) return null;
+
+  return (
+    <div>
+      <label className="form-label">{label}</label>
+      <div className={`${bg} p-3 rounded text-sm space-y-1 mt-1`}>
+        {entries.map(({ label, val }) => (
+          <div key={label} className="flex gap-2">
+            <span className="text-secondary-500 w-32 shrink-0">{label}:</span>
+            <span className="font-medium">{String(val)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export const ChangeRequestsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { canApprove } = usePermissions();
   const [selectedCR, setSelectedCR] = useState<ChangeRequest | null>(null);
   const [reviewNote, setReviewNote] = useState('');
-  const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['change-requests'],
     queryFn: () => apiService.getChangeRequests(),
   });
 
+  // Extract error message from axios error
+  const getError = (e: any) =>
+    e?.response?.data?.DDMS_error_code || e?.response?.data?.DDMS_data || e?.message || 'Something went wrong';
+
   const approveMutation = useMutation({
-    mutationFn: ({ id, note }: { id: string; note: string }) => apiService.approveChangeRequest(id, note),
+    mutationFn: ({ id, note }: { id: string; note: string }) =>
+      apiService.approveChangeRequest(id, note),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['change-requests'] });
       toast.success('Change request approved and applied');
-      setSelectedCR(null); setReviewNote(''); setReviewAction(null);
+      setSelectedCR(null); setReviewNote('');
     },
-    onError: (e: any) => toast.error(e.message || 'Failed to approve'),
+    onError: (e: any) => toast.error(getError(e)),
   });
 
   const rejectMutation = useMutation({
-    mutationFn: ({ id, note }: { id: string; note: string }) => apiService.rejectChangeRequest(id, note),
+    mutationFn: ({ id, note }: { id: string; note: string }) =>
+      apiService.rejectChangeRequest(id, note),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['change-requests'] });
       toast.success('Change request rejected');
-      setSelectedCR(null); setReviewNote(''); setReviewAction(null);
+      setSelectedCR(null); setReviewNote('');
     },
-    onError: (e: any) => toast.error(e.message || 'Failed to reject'),
+    onError: (e: any) => toast.error(getError(e)),
   });
 
   const handleReview = (action: 'approve' | 'reject') => {
     if (!selectedCR) return;
     if (action === 'reject' && !reviewNote.trim()) { toast.error('Review note required for rejection'); return; }
-    if (action === 'approve') approveMutation.mutate({ id: selectedCR.id, note: reviewNote });
-    else rejectMutation.mutate({ id: selectedCR.id, note: reviewNote });
+    const payload = { id: String(selectedCR.id), note: reviewNote };
+    if (action === 'approve') approveMutation.mutate(payload);
+    else rejectMutation.mutate(payload);
   };
 
   const changeRequests: ChangeRequest[] = data?.DDMS_data || [];
@@ -111,20 +176,20 @@ export const ChangeRequestsPage: React.FC = () => {
                         {cr.status}
                       </span>
                     </td>
-                    <td className="table-cell">{new Date(cr.created_at).toLocaleDateString()}</td>
+                    <td className="table-cell">{new Date(cr.created_at).toLocaleDateString('en-IN')}</td>
                     <td className="table-cell">
                       <div className="flex space-x-1">
-                        <Button variant="ghost" size="sm" onClick={() => setSelectedCR(cr)}>
+                        <Button variant="ghost" size="sm" onClick={() => { setSelectedCR(cr); setReviewNote(''); }}>
                           <Eye className="w-4 h-4" />
                         </Button>
                         {canApprove('change_requests') && cr.status === 'PENDING' && (
                           <>
                             <Button variant="ghost" size="sm" className="text-green-600"
-                              onClick={() => { setSelectedCR(cr); setReviewAction('approve'); }}>
+                              onClick={() => { setSelectedCR(cr); setReviewNote(''); }}>
                               <Check className="w-4 h-4" />
                             </Button>
                             <Button variant="ghost" size="sm" className="text-red-600"
-                              onClick={() => { setSelectedCR(cr); setReviewAction('reject'); }}>
+                              onClick={() => { setSelectedCR(cr); setReviewNote(''); }}>
                               <X className="w-4 h-4" />
                             </Button>
                           </>
@@ -139,39 +204,51 @@ export const ChangeRequestsPage: React.FC = () => {
         </div>
       </Card>
 
-      <Modal isOpen={!!selectedCR} onClose={() => { setSelectedCR(null); setReviewNote(''); setReviewAction(null); }}
+      <Modal isOpen={!!selectedCR}
+        onClose={() => { setSelectedCR(null); setReviewNote(''); }}
         title={`Change Request — ${selectedCR?.entity_type} #${selectedCR?.entity_id}`} size="lg">
         {selectedCR && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 text-sm">
-              <div><label className="form-label">Action</label>
-                <span className={`px-2 py-1 rounded text-xs font-medium ${selectedCR.action === 'DELETE' ? 'text-red-700 bg-red-100' : 'text-blue-700 bg-blue-100'}`}>{selectedCR.action}</span>
+              <div>
+                <label className="form-label">Action</label>
+                <span className={`px-2 py-1 rounded text-xs font-medium ${selectedCR.action === 'DELETE' ? 'text-red-700 bg-red-100' : 'text-blue-700 bg-blue-100'}`}>
+                  {selectedCR.action}
+                </span>
               </div>
-              <div><label className="form-label">Status</label>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor[selectedCR.status]}`}>{selectedCR.status}</span>
+              <div>
+                <label className="form-label">Status</label>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor[selectedCR.status]}`}>
+                  {selectedCR.status}
+                </span>
               </div>
               <div><label className="form-label">Requested By</label><p>{selectedCR.requested_by_name}</p></div>
-              <div><label className="form-label">Date</label><p>{new Date(selectedCR.created_at).toLocaleDateString()}</p></div>
-              <div className="col-span-2"><label className="form-label">Reason</label>
+              <div><label className="form-label">Date</label><p>{new Date(selectedCR.created_at).toLocaleDateString('en-IN')}</p></div>
+              <div className="col-span-2">
+                <label className="form-label">Reason</label>
                 <p className="bg-secondary-50 p-2 rounded">{selectedCR.reason}</p>
               </div>
             </div>
 
-            {selectedCR.old_data && (
-              <div>
-                <label className="form-label">Current Data (Snapshot)</label>
-                <pre className="bg-secondary-50 p-3 rounded text-xs overflow-auto max-h-32">
-                  {JSON.stringify(selectedCR.old_data, null, 2)}
-                </pre>
-              </div>
-            )}
+            {/* Current state — clean display */}
+            <DataDisplay
+              data={selectedCR.old_data}
+              entityType={selectedCR.entity_type}
+              label="Current Data"
+            />
 
-            {selectedCR.new_data && (
-              <div>
-                <label className="form-label">Requested Changes</label>
-                <pre className="bg-blue-50 p-3 rounded text-xs overflow-auto max-h-32">
-                  {JSON.stringify(selectedCR.new_data, null, 2)}
-                </pre>
+            {/* Requested changes — clean display */}
+            {selectedCR.action === 'UPDATE' && (
+              <DataDisplay
+                data={selectedCR.new_data}
+                entityType={selectedCR.entity_type}
+                label="Requested Changes"
+                bg="bg-blue-50"
+              />
+            )}
+            {selectedCR.action === 'DELETE' && (
+              <div className="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-700">
+                ⚠️ This request will <strong>cancel/delete</strong> the above record permanently.
               </div>
             )}
 
@@ -184,17 +261,25 @@ export const ChangeRequestsPage: React.FC = () => {
 
             {canApprove('change_requests') && selectedCR.status === 'PENDING' && (
               <div className="border-t pt-4 space-y-3">
-                <Input label={reviewAction === 'reject' ? 'Review Note (required)' : 'Review Note (optional)'}
-                  value={reviewNote} onChange={(e) => setReviewNote(e.target.value)}
-                  placeholder="Add a note..." />
+                <Input
+                  label="Review Note (required for rejection)"
+                  value={reviewNote}
+                  onChange={(e) => setReviewNote(e.target.value)}
+                  placeholder="Add a note..."
+                />
                 <div className="flex gap-2 justify-end">
-                  <Button variant="outline" onClick={() => { setSelectedCR(null); setReviewNote(''); setReviewAction(null); }}>Cancel</Button>
-                  <Button className="bg-red-600 hover:bg-red-700 text-white"
-                    onClick={() => handleReview('reject')} disabled={rejectMutation.isPending}>
-                    Reject
+                  <Button variant="outline" onClick={() => { setSelectedCR(null); setReviewNote(''); }}>
+                    Cancel
                   </Button>
-                  <Button onClick={() => handleReview('approve')} disabled={approveMutation.isPending}>
-                    Approve & Apply
+                  <Button className="bg-red-600 hover:bg-red-700 text-white"
+                    onClick={() => handleReview('reject')}
+                    disabled={rejectMutation.isPending}>
+                    <X className="w-4 h-4 mr-1" /> Reject
+                  </Button>
+                  <Button onClick={() => handleReview('approve')}
+                    disabled={approveMutation.isPending}>
+                    <Check className="w-4 h-4 mr-1" />
+                    {approveMutation.isPending ? 'Approving...' : 'Approve & Apply'}
                   </Button>
                 </div>
               </div>
