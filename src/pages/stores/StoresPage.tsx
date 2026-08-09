@@ -141,22 +141,21 @@ export const StoresPage: React.FC = () => {
     setEditingStore(store);
     setFormData({
       id: store.id,
-      name: store.name,
-      address: store.address,
-      city: store.city,
-      state: store.state,
-      contact: store.contact,
-      email: store.email,
-      receiptLayout: store.receiptLayout,
-      paymentOptions: store.paymentOptions,
-      onlinePaymentEnabled: store.onlinePaymentEnabled,
-      subscriptionStatus: store.subscriptionStatus,
-      subscriptionExpiresAt: store.subscriptionExpiresAt,
-      // Populate admin details from API response
+      name: store.name || '',
+      address: store.address || '',
+      city: store.city || '',
+      state: store.state || '',
+      contact: store.contact || '',
+      email: store.email || '',
+      receiptLayout: store.receiptLayout || '',
+      paymentOptions: store.paymentOptions || '',
+      onlinePaymentEnabled: store.onlinePaymentEnabled ?? store.online_payment_enabled ?? false,
+      subscriptionStatus: store.subscriptionStatus || store.subscription_status || 'ACTIVE',
+      subscriptionExpiresAt: store.subscriptionExpiresAt || store.subscription_expires_at || '',
       adminName: store.admin_name || '',
       adminMobile: store.admin_mobile || '',
       adminEmail: store.admin_email || '',
-      adminPassword: '', // Don't pre-fill password for security
+      adminPassword: '',
     });
     setShowModal(true);
   };
@@ -165,17 +164,17 @@ export const StoresPage: React.FC = () => {
     setEditingStore(store);
     setFormData({
       id: store.id,
-      name: store.name,
-      address: store.address,
-      city: store.city,
-      state: store.state,
-      contact: store.contact,
-      email: store.email,
-      receiptLayout: store.receiptLayout,
-      paymentOptions: store.paymentOptions,
-      onlinePaymentEnabled: store.onlinePaymentEnabled,
-      subscriptionStatus: store.subscriptionStatus,
-      subscriptionExpiresAt: store.subscriptionExpiresAt,
+      name: store.name || '',
+      address: store.address || '',
+      city: store.city || '',
+      state: store.state || '',
+      contact: store.contact || '',
+      email: store.email || '',
+      receiptLayout: store.receiptLayout || '',
+      paymentOptions: store.paymentOptions || '',
+      onlinePaymentEnabled: store.onlinePaymentEnabled ?? store.online_payment_enabled ?? false,
+      subscriptionStatus: store.subscriptionStatus || store.subscription_status || 'ACTIVE',
+      subscriptionExpiresAt: store.subscriptionExpiresAt || '',
       adminName: '',
       adminMobile: '',
       adminEmail: '',
@@ -241,12 +240,12 @@ export const StoresPage: React.FC = () => {
                     </Button>
                   </div>
                 </div>
-                <div className="space-y-2 text-sm text-secondary-600">
-                  <p>{store.address}</p>
-                  <p>{store.city}, {store.state}</p>
-                  <p>📞 {store.contact}</p>
-                  <p>✉️ {store.email}</p>
-                  {store.subscriptionExpiresAt && (
+                <div className="space-y-1 text-sm text-secondary-600">
+                  {store.address && <p>📍 {store.address}{store.city ? `, ${store.city}` : ''}{store.state ? `, ${store.state}` : ''}</p>}
+                  {store.contact && <p>📞 {store.contact}</p>}
+                  {store.email && <p>✉️ {store.email}</p>}
+                  {store.admin_name && <p>👤 Admin: {store.admin_name}</p>}
+                  {(store.subscriptionExpiresAt) && (
                     <p className="text-xs">
                       <Calendar className="w-3 h-3 inline mr-1" />
                       Expires: {new Date(store.subscriptionExpiresAt).toLocaleDateString()}
@@ -410,32 +409,24 @@ export const StoresPage: React.FC = () => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-4">
             <h3 className="font-semibold text-lg">Payment Options</h3>
-            <Input
-              label="Payment Options (JSON)"
-              value={formData.paymentOptions || ''}
-              onChange={(e) => setFormData({ ...formData, paymentOptions: e.target.value })}
-              placeholder='{"cash": true, "cheque": true, "online": true}'
-            />
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="onlinePaymentSettings"
-                checked={formData.onlinePaymentEnabled}
-                onChange={(e) => setFormData({ ...formData, onlinePaymentEnabled: e.target.checked })}
-                className="w-4 h-4"
-              />
-              <label htmlFor="onlinePaymentSettings" className="text-sm">Enable Online Payment</label>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" className="w-4 h-4 accent-primary-600"
+                  checked={true} disabled />
+                <span className="text-sm">Cash</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" className="w-4 h-4 accent-primary-600"
+                  checked={true} disabled />
+                <span className="text-sm">Cheque</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" className="w-4 h-4 accent-primary-600"
+                  checked={formData.onlinePaymentEnabled || false}
+                  onChange={(e) => setFormData({ ...formData, onlinePaymentEnabled: e.target.checked })} />
+                <span className="text-sm">Online Payment</span>
+              </label>
             </div>
-          </div>
-
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg">Receipt Layout</h3>
-            <textarea
-              className="w-full border rounded-lg p-2 min-h-[100px]"
-              value={formData.receiptLayout || ''}
-              onChange={(e) => setFormData({ ...formData, receiptLayout: e.target.value })}
-              placeholder="Receipt layout configuration..."
-            />
           </div>
 
           <div className="space-y-4">
