@@ -254,21 +254,21 @@ export const StoresPage: React.FC = () => {
                   )}
                   <div className="flex justify-between items-center mt-4">
                     <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                      store.subscriptionStatus === 'ACTIVE' 
+                      (store.subscriptionStatus || store.subscription_status) === 'ACTIVE' 
                         ? 'bg-green-100 text-green-800' 
-                        : store.subscriptionStatus === 'EXPIRED'
+                        : (store.subscriptionStatus || store.subscription_status) === 'EXPIRED'
                         ? 'bg-red-100 text-red-800'
                         : 'bg-yellow-100 text-yellow-800'
                     }`}>
-                      {store.subscriptionStatus}
+                      {store.subscriptionStatus || store.subscription_status || 'ACTIVE'}
                     </span>
                     <span className="text-xs text-secondary-500">
-                      {store.onlinePaymentEnabled ? '💳 Online' : '💵 Cash'}
+                      {(store.onlinePaymentEnabled || store.online_payment_enabled) ? '💳 Online' : '💵 Cash'}
                     </span>
                   </div>
-                  {store.subscriptionStatus !== 'ACTIVE' && (
+                  {(store.subscriptionStatus || store.subscription_status) && (store.subscriptionStatus || store.subscription_status) !== 'ACTIVE' && (
                     <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
-                      ⚠️ Store is {store.subscriptionStatus.toLowerCase()}. Functions are restricted.
+                      ⚠️ Store is {(store.subscriptionStatus || store.subscription_status || '').toLowerCase()}. Functions are restricted.
                     </div>
                   )}
                 </div>
