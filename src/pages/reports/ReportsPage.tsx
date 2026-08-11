@@ -60,14 +60,14 @@ export const ReportsPage: React.FC = () => {
       setIsImporting(false);
     }
   };
+
+  const handleExport = async (type: string) => {
     if (!startDate || !endDate) {
       toast.error('Please select date range');
       return;
     }
-    
     try {
       setIsExporting(true);
-      
       if (type === 'receipts') {
         await apiService.exportReceiptsToExcel(startDate, endDate);
       } else if (type === 'financial') {
@@ -83,9 +83,8 @@ export const ReportsPage: React.FC = () => {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
       }
-      
       toast.success('Report exported successfully');
-    } catch (error) {
+    } catch {
       toast.error('Failed to export report');
     } finally {
       setIsExporting(false);
