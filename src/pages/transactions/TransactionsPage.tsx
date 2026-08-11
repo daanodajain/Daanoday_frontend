@@ -130,22 +130,22 @@ export const TransactionsPage: React.FC = () => {
             <tbody className="divide-y divide-secondary-200">
               {transactions?.DDMS_data?.transactions?.map((transaction: any) => (
                 <tr key={transaction.id} className="hover:bg-secondary-50">
-                  <td className="table-cell">{new Date(transaction.createdAt).toLocaleDateString()}</td>
+                  <td className="table-cell">{new Date(transaction.created_at).toLocaleDateString()}</td>
                   <td className="table-cell">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(transaction.type)}`}>
                       {transaction.type}
                     </span>
                   </td>
-                  <td className="table-cell font-medium">{transaction.referenceNumber}</td>
+                  <td className="table-cell font-medium">{transaction.reference_number || '-'}</td>
                   <td className="table-cell">
-                    {transaction.type === 'RECEIPT' ? transaction.customerName : transaction.supplierName}
+                    {transaction.type === 'RECEIPT' ? transaction.customer_name : transaction.supplier_name}
                   </td>
                   <td className="table-cell">
                     <span className={transaction.type === 'RECEIPT' ? 'text-green-600 font-semibold' : 'text-blue-600 font-semibold'}>
-                      {transaction.type === 'RECEIPT' ? '+' : '-'}₹{transaction.amount.toLocaleString()}
+                      {transaction.type === 'RECEIPT' ? '+' : '-'}₹{Number(transaction.amount).toLocaleString()}
                     </span>
                   </td>
-                  <td className="table-cell">{transaction.paymentMode}</td>
+                  <td className="table-cell">{transaction.payment_mode || '-'}</td>
                 </tr>
               ))}
             </tbody>

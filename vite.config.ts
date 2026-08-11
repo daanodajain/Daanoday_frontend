@@ -48,8 +48,8 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/api\./i,
-            handler: 'NetworkFirst',
+            urlPattern: /^https:\/\/ddback\.daanoday\.com\//i,
+            handler: 'NetworkOnly',
             options: {
               cacheName: 'api-cache'
             }

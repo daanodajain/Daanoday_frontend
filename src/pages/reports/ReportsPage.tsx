@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { apiService } from '@/services/api';
+import { useAuthStore } from '@/store/authStore';
 import toast from 'react-hot-toast';
 
 export const ReportsPage: React.FC = () => {
@@ -14,7 +15,10 @@ export const ReportsPage: React.FC = () => {
   const [reportType, setReportType] = useState('receipts');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [isExporting, setIsExporting] = useState(false);
+  const [importType, setImportType] = useState('customers');
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const { data: financialData } = useQuery({
     queryKey: ['financial-report'],
@@ -22,7 +26,40 @@ export const ReportsPage: React.FC = () => {
   });
   const fin = financialData?.DDMS_data;
 
-  const handleExport = async (type: string) => {
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleDownloadTemplate = async () => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL || 'https://ddback.daanoday.com/api'}/reports/import/template/${importType}`,
+        { headers: { Authorization: `Bearer ${useAuthStore.getState().token}`, 'X-Store-ID': useAuthStore.getState().currentStore?.id || '' } }
+      );
+      if (!response.ok) throw new Error('Failed');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${importType}-import-template.xlsx`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch { toast.error('Failed to download template'); }
+  };
+
+  const handleImport = async () => {
+    if (!importFile) { toast.error('Please select a file'); return; }
+    try {
+      setIsImporting(true);
+      const result = await apiService.importData(importType, importFile);
+      const d = result?.DDMS_data;
+      toast.success(`Imported ${d?.inserted ?? 0} records. Skipped: ${d?.skipped ?? 0}`);
+      setImportFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    } catch (e: any) {
+      toast.error(e?.message || 'Import failed');
+    } finally {
+      setIsImporting(false);
+    }
+  };
     if (!startDate || !endDate) {
       toast.error('Please select date range');
       return;
@@ -214,19 +251,35 @@ export const ReportsPage: React.FC = () => {
           <p className="text-sm text-secondary-600 mb-4">
             Import data from Excel/CSV files. Download the template first to ensure proper formatting.
           </p>
-          <div className="flex gap-4">
-            <Select className="flex-1">
-              <option value="">Select data type to import</option>
-              <option value="customers">Customers</option>
-              <option value="suppliers">Suppliers</option>
-              <option value="particulars">Particulars</option>
-            </Select>
-            <Button variant="outline">
-              Download Template
-            </Button>
-            <Button>
-              Choose File & Import
-            </Button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <Select value={importType} onChange={(e) => setImportType(e.target.value)}>
+                <option value="customers">Customers</option>
+                <option value="suppliers">Suppliers</option>
+                <option value="particulars">Particulars</option>
+              </Select>
+              <Button variant="outline" className="w-full" onClick={handleDownloadTemplate}>
+                <Download className="w-4 h-4 mr-2" />
+                Download Template
+              </Button>
+            </div>
+            <div className="space-y-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                className="block w-full text-sm text-secondary-600 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 border border-secondary-300 rounded-md p-1"
+                onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+              />
+              <Button className="w-full" onClick={handleImport} disabled={isImporting || !importFile}>
+                {isImporting ? 'Importing...' : 'Import File'}
+              </Button>
+            </div>
+          </div>
+          <div className="mt-3 text-xs text-secondary-500 space-y-1">
+            <p>• <strong>Customers:</strong> Name*, Mobile*, Email, Address, Password</p>
+            <p>• <strong>Suppliers:</strong> Company Name*, Contact Person, Phone, Email, Address</p>
+            <p>• <strong>Particulars:</strong> Name*, Type* (RECEIPT or CHALLAN)</p>
           </div>
         </div>
       </Card>

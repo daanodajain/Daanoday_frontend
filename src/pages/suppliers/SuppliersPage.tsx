@@ -108,8 +108,8 @@ export const SuppliersPage: React.FC = () => {
   };
 
   const filteredSuppliers = suppliers?.DDMS_data?.filter((supplier: any) =>
-    supplier.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    supplier.contactPerson.toLowerCase().includes(searchTerm.toLowerCase())
+    supplier.companyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    supplier.contactPerson?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (isLoading) {

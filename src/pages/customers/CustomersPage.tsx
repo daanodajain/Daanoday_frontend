@@ -17,7 +17,7 @@ export const CustomersPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<any>(null);
-  const [formData, setFormData] = useState({ name: '', mobile: '' });
+  const [formData, setFormData] = useState({ name: '', mobile: '', email: '', address: '', password: '' });
 
   const { data: customersData, isLoading } = useQuery({
     queryKey: ['customers', searchTerm],
@@ -42,11 +42,11 @@ export const CustomersPage: React.FC = () => {
     onError: (e: any) => toast.error(e.message || 'Failed to delete customer'),
   });
 
-  const handleClose = () => { setShowModal(false); setEditingCustomer(null); setFormData({ name: '', mobile: '' }); };
+  const handleClose = () => { setShowModal(false); setEditingCustomer(null); setFormData({ name: '', mobile: '', email: '', address: '', password: '' }); };
 
   const handleEdit = (customer: any) => {
     setEditingCustomer(customer);
-    setFormData({ name: customer.name, mobile: customer.mobile });
+    setFormData({ name: customer.name, mobile: customer.mobile, email: customer.email || '', address: customer.address || '', password: '' });
     setShowModal(true);
   };
 
@@ -95,7 +95,8 @@ export const CustomersPage: React.FC = () => {
                 <th className="table-header-cell">Account #</th>
                 <th className="table-header-cell">{t('customer.name')}</th>
                 <th className="table-header-cell">{t('customer.mobile')}</th>
-                <th className="table-header-cell">First Login</th>
+                <th className="table-header-cell">Email</th>
+                <th className="table-header-cell">Login Status</th>
                 <th className="table-header-cell">{t('common.actions')}</th>
               </tr>
             </thead>
@@ -107,10 +108,11 @@ export const CustomersPage: React.FC = () => {
                     <div className="flex items-center"><User className="w-4 h-4 mr-2 text-secondary-400" />{customer.name}</div>
                   </td>
                   <td className="table-cell">{customer.mobile}</td>
+                  <td className="table-cell">{customer.email || '-'}</td>
                   <td className="table-cell">
                     {customer.first_login
-                      ? <span className="text-xs text-orange-600">Pending setup</span>
-                      : <span className="text-xs text-green-600">Done</span>}
+                      ? <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded">Password not set</span>
+                      : <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">Active</span>}
                   </td>
                   <td className="table-cell">
                     <div className="flex space-x-2">
@@ -141,6 +143,14 @@ export const CustomersPage: React.FC = () => {
             onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
           <Input label={`${t('customer.mobile')} *`} type="tel" value={formData.mobile}
             onChange={(e) => setFormData({ ...formData, mobile: e.target.value })} required />
+          <Input label="Email" type="email" value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+          <Input label="Address" value={formData.address}
+            onChange={(e) => setFormData({ ...formData, address: e.target.value })} />
+          <Input label={editingCustomer ? 'New Password (leave blank to keep)' : 'Password *'}
+            type="password" value={formData.password}
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            required={!editingCustomer} />
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={handleClose}>{t('common.cancel')}</Button>
             <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>

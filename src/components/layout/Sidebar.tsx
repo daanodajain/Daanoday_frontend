@@ -7,26 +7,28 @@ import {
   LogOut, History, GitPullRequest, Crown, Wrench
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
+import { usePermissions } from '@/hooks/usePermissions';
 import { clsx } from 'clsx';
 
+// permission: [resource, action] — null means always show (dashboard/notifications)
 const navigationItems = [
-  { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-  { key: 'stores', label: 'Stores', icon: Store, path: '/stores', superAdminOnly: true },
-  { key: 'superAdminSubscriptions', label: 'Subscriptions', icon: Crown, path: '/super-admin/subscriptions', superAdminOnly: true },
-  { key: 'superAdminSettings', label: 'System Settings', icon: Wrench, path: '/super-admin/settings', superAdminOnly: true },
-  { key: 'users', label: 'Users', icon: Users, path: '/users' },
-  { key: 'roles', label: 'Roles', icon: Shield, path: '/roles' },
-  { key: 'customers', label: 'Customers', icon: UserCheck, path: '/customers' },
-  { key: 'suppliers', label: 'Suppliers', icon: Truck, path: '/suppliers' },
-  { key: 'particulars', label: 'Particulars', icon: FileText, path: '/particulars' },
-  { key: 'receipts', label: 'Receipts', icon: Receipt, path: '/receipts' },
-  { key: 'challans', label: 'Challans', icon: FileBarChart, path: '/challans' },
-  { key: 'transactions', label: 'Transactions', icon: CreditCard, path: '/transactions' },
-  { key: 'reports', label: 'Reports', icon: BarChart3, path: '/reports' },
-  { key: 'changeRequests', label: 'Change Requests', icon: GitPullRequest, path: '/change-requests' },
-  { key: 'notifications', label: 'Notifications', icon: Bell, path: '/notifications' },
-  { key: 'news', label: 'News & Events', icon: Newspaper, path: '/news' },
-  { key: 'audit', label: 'Audit Logs', icon: History, path: '/audit' },
+  { key: 'dashboard',               label: 'Dashboard',       icon: LayoutDashboard, path: '/dashboard',                    permission: null },
+  { key: 'stores',                  label: 'Stores',          icon: Store,           path: '/stores',                       superAdminOnly: true },
+  { key: 'superAdminSubscriptions', label: 'Subscriptions',   icon: Crown,           path: '/super-admin/subscriptions',    superAdminOnly: true },
+  { key: 'superAdminSettings',      label: 'System Settings', icon: Wrench,          path: '/super-admin/settings',         superAdminOnly: true },
+  { key: 'users',                   label: 'Users',           icon: Users,           path: '/users',                        permission: ['users', 'read'] },
+  { key: 'roles',                   label: 'Roles',           icon: Shield,          path: '/roles',                        permission: ['roles', 'read'] },
+  { key: 'customers',               label: 'Customers',       icon: UserCheck,       path: '/customers',                    permission: ['customers', 'read'] },
+  { key: 'suppliers',               label: 'Suppliers',       icon: Truck,           path: '/suppliers',                    permission: ['suppliers', 'read'] },
+  { key: 'particulars',             label: 'Particulars',     icon: FileText,        path: '/particulars',                  permission: ['particulars', 'read'] },
+  { key: 'receipts',                label: 'Receipts',        icon: Receipt,         path: '/receipts',                     permission: ['receipts', 'read'] },
+  { key: 'challans',                label: 'Challans',        icon: FileBarChart,    path: '/challans',                     permission: ['challans', 'read'] },
+  { key: 'transactions',            label: 'Transactions',    icon: CreditCard,      path: '/transactions',                 permission: ['transactions', 'read'] },
+  { key: 'reports',                 label: 'Reports',         icon: BarChart3,       path: '/reports',                      permission: ['reports', 'read'] },
+  { key: 'changeRequests',          label: 'Change Requests', icon: GitPullRequest,  path: '/change-requests',              permission: ['change_requests', 'read'] },
+  { key: 'notifications',           label: 'Notifications',   icon: Bell,            path: '/notifications',                permission: ['notifications', 'read'] },
+  { key: 'news',                    label: 'News & Events',   icon: Newspaper,       path: '/news',                         permission: ['news_events', 'read'] },
+  { key: 'audit',                   label: 'Audit Logs',      icon: History,         path: '/audit',                        permission: ['audit_logs', 'read'] },
 ];
 
 interface SidebarProps {
@@ -36,6 +38,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { user, logout, currentStore, isSuperAdmin } = useAuthStore();
+  const { hasPermission } = usePermissions();
 
   const handleLogout = async () => {
     await logout();
@@ -87,7 +90,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             )}
             {navigationItems.map((item) => {
               if (item.superAdminOnly && !isSuperAdmin) return null;
-              
+              // Hide store-scoped items from super admin when no store selected
+              if (!item.superAdminOnly && isSuperAdmin) {
+                // Super admin sees all store-scoped items
+              } else if (!isSuperAdmin && item.permission) {
+                // Regular user: check permission
+                const [resource, action] = item.permission;
+                if (!hasPermission(resource, action)) return null;
+              }
+
               // Add section divider before regular items for super admin
               const isFirstRegularItem = item.key === 'users';
               

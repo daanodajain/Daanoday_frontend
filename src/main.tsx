@@ -12,7 +12,15 @@ registerSW({
   onNeedRefresh() {
     window.location.reload();
   },
+  onOfflineReady() {},
 });
+
+// Hard-clear old caches on every load so stale assets never get served
+if ('caches' in window) {
+  caches.keys().then((keys) => {
+    keys.forEach((key) => caches.delete(key));
+  });
+}
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
