@@ -30,12 +30,19 @@ export const ReceiptsPage: React.FC = () => {
   const [changeRequestModal, setChangeRequestModal] = useState<{ receipt: Receipt; action: 'UPDATE' | 'DELETE' } | null>(null);
   const [changeReason, setChangeReason] = useState('');
   const [newData, setNewData] = useState<any>({});
+  const [editParticulars, setEditParticulars] = useState<{ particularId: string; particularName: string; amount: number; paidAmount: number }[]>([]);
   const [collectModal, setCollectModal] = useState<Receipt | null>(null);
   const [collectPaymentMode, setCollectPaymentMode] = useState('CASH');
 
   const { data, isLoading } = useQuery({
     queryKey: ['receipts', searchTerm],
     queryFn: () => apiService.getReceipts({ search: searchTerm }),
+  });
+
+  const { data: particularsList } = useQuery({
+    queryKey: ['particulars', 'RECEIPT'],
+    queryFn: () => apiService.getParticulars('RECEIPT'),
+    enabled: !!changeRequestModal,
   });
 
   const approveMutation = useMutation({
@@ -94,16 +101,59 @@ export const ReceiptsPage: React.FC = () => {
       toast.error('Reason is required');
       return;
     }
+    let payload = newData;
+    if (changeRequestModal.action === 'UPDATE') {
+      const totalAmount = editParticulars.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+      if (editParticulars.some(p => !p.particularId || !p.amount)) {
+        toast.error('Every particular needs an item and amount');
+        return;
+      }
+      if (editParticulars.some(p => Number(p.paidAmount) > Number(p.amount) || Number(p.paidAmount) < 0)) {
+        toast.error('Paid amount per item cannot be negative or exceed that item\'s amount');
+        return;
+      }
+      payload = {
+        ...newData,
+        total_amount: totalAmount,
+        particulars: editParticulars.map(p => ({
+          particularId: p.particularId,
+          particularName: p.particularName,
+          amount: Number(p.amount),
+          paidAmount: Number(p.paidAmount),
+        })),
+      };
+    }
     changeRequestMutation.mutate({
       entityType: 'RECEIPT',
       entityId: changeRequestModal.receipt.id,
       action: changeRequestModal.action,
       reason: changeReason,
-      newData: changeRequestModal.action === 'UPDATE' ? newData : undefined,
+      newData: changeRequestModal.action === 'UPDATE' ? payload : undefined,
     });
   };
 
   const receipts: Receipt[] = data?.DDMS_data?.receipts || data?.DDMS_data || [];
+
+  const handleOpenEdit = async (receipt: Receipt) => {
+    try {
+      // List rows don't include particulars (only the single-receipt fetch
+      // does) — fetch full detail first so the edit form isn't empty.
+      const res = await apiService.get(`/receipts/${receipt.id}`);
+      const full: Receipt = res.DDMS_data;
+      setChangeRequestModal({ receipt: full, action: 'UPDATE' });
+      setNewData({ payment_mode: full.payment_mode });
+      setEditParticulars(
+        (full.particulars || []).map(p => ({
+          particularId: String(p.particular_id),
+          particularName: p.particular_name,
+          amount: Number(p.amount),
+          paidAmount: Number(p.paid_amount ?? p.amount),
+        }))
+      );
+    } catch (e: any) {
+      toast.error('Failed to load receipt details for editing');
+    }
+  };
 
   if (isLoading) {
     return (
@@ -220,7 +270,7 @@ export const ReceiptsPage: React.FC = () => {
                         {receipt.receipt_state !== 'CANCELLED' && receipt.receipt_state !== 'REJECTED' && (
                           <>
                             <Button variant="ghost" size="sm" className="text-blue-600"
-                              onClick={() => { setChangeRequestModal({ receipt, action: 'UPDATE' }); setNewData({ total_amount: receipt.total_amount, payment_mode: receipt.payment_mode }); }}>
+                              onClick={() => handleOpenEdit(receipt)}>
                               <FileEdit className="w-4 h-4" />
                             </Button>
                             <Button variant="ghost" size="sm" className="text-red-600"
@@ -289,6 +339,12 @@ export const ReceiptsPage: React.FC = () => {
               <div><label className="form-label">Account #</label><p>{selectedReceipt.account_number}</p></div>
               <div><label className="form-label">Amount</label><p className="font-bold text-lg">₹{Number(selectedReceipt.total_amount).toLocaleString()}</p></div>
               <div><label className="form-label">Payment Mode</label><p>{selectedReceipt.payment_mode}</p></div>
+              {selectedReceipt.status === 'PARTIAL' && (
+                <>
+                  <div><label className="form-label">Paid Amount</label><p className="font-medium text-green-700">₹{Number(selectedReceipt.paid_amount || 0).toLocaleString()}</p></div>
+                  <div><label className="form-label">Due Amount</label><p className="font-medium text-amber-700">₹{(Number(selectedReceipt.total_amount) - Number(selectedReceipt.paid_amount || 0)).toLocaleString()}</p></div>
+                </>
+              )}
               <div><label className="form-label">State</label>
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${stateColor[selectedReceipt.receipt_state]}`}>
                   {selectedReceipt.receipt_state}
@@ -300,12 +356,13 @@ export const ReceiptsPage: React.FC = () => {
               <div>
                 <label className="form-label">Particulars</label>
                 <table className="w-full text-sm mt-1">
-                  <thead><tr className="border-b"><th className="text-left py-1">Item</th><th className="text-right py-1">Amount</th></tr></thead>
+                  <thead><tr className="border-b"><th className="text-left py-1">Item</th><th className="text-right py-1">Amount</th>{selectedReceipt.status === 'PARTIAL' && <th className="text-right py-1">Paid</th>}</tr></thead>
                   <tbody>
                     {selectedReceipt.particulars.map((p) => (
                       <tr key={p.id} className="border-b last:border-0">
                         <td className="py-1">{p.particular_name}</td>
                         <td className="py-1 text-right">₹{Number(p.amount).toLocaleString()}</td>
+                        {selectedReceipt.status === 'PARTIAL' && <td className="py-1 text-right">₹{Number(p.paid_amount).toLocaleString()}</td>}
                       </tr>
                     ))}
                   </tbody>
@@ -331,8 +388,76 @@ export const ReceiptsPage: React.FC = () => {
           </div>
           {changeRequestModal?.action === 'UPDATE' && (
             <div className="space-y-3">
-              <Input label="New Total Amount" type="number" value={newData.total_amount || ''}
-                onChange={(e) => setNewData({ ...newData, total_amount: Number(e.target.value) })} />
+              <div className="flex justify-between items-center">
+                <label className="form-label mb-0">Particulars</label>
+                <Button type="button" size="sm"
+                  onClick={() => setEditParticulars([...editParticulars, { particularId: '', particularName: '', amount: 0, paidAmount: 0 }])}>
+                  + Add Item
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {editParticulars.map((p, index) => (
+                  <div key={index} className="flex gap-2 items-end">
+                    <div className="flex-1">
+                      <select
+                        className="input w-full"
+                        value={p.particularId}
+                        onChange={(e) => {
+                          const updated = [...editParticulars];
+                          const item = (particularsList?.DDMS_data || []).find((x: any) => String(x.id) === e.target.value);
+                          updated[index] = { ...updated[index], particularId: e.target.value, particularName: item?.name || '' };
+                          setEditParticulars(updated);
+                        }}
+                      >
+                        <option value="">Select Item</option>
+                        {(particularsList?.DDMS_data || []).map((item: any) => (
+                          <option key={item.id} value={item.id}>{item.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="w-24">
+                      <Input type="number" min="1" placeholder="Amount" value={p.amount || ''}
+                        onChange={(e) => {
+                          const updated = [...editParticulars];
+                          const amt = Number(e.target.value);
+                          updated[index] = { ...updated[index], amount: amt, paidAmount: Math.min(updated[index].paidAmount, amt) };
+                          setEditParticulars(updated);
+                        }} />
+                    </div>
+                    <div className="w-24">
+                      <Input type="number" min="0" max={p.amount || 0} placeholder="Paid" value={p.paidAmount ?? ''}
+                        onChange={(e) => {
+                          const updated = [...editParticulars];
+                          updated[index] = { ...updated[index], paidAmount: Number(e.target.value) };
+                          setEditParticulars(updated);
+                        }} />
+                    </div>
+                    <Button type="button" variant="ghost" size="sm" className="text-red-500"
+                      onClick={() => setEditParticulars(editParticulars.filter((_, i) => i !== index))}>
+                      ✕
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              {editParticulars.length > 0 && (
+                <div className="pt-2 border-t space-y-1 text-sm">
+                  <div className="flex justify-between font-semibold">
+                    <span>Total:</span>
+                    <span>₹{editParticulars.reduce((s, p) => s + (Number(p.amount) || 0), 0).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between text-secondary-600">
+                    <span>Paid:</span>
+                    <span>₹{editParticulars.reduce((s, p) => s + (Number(p.paidAmount) || 0), 0).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between text-amber-600 font-medium">
+                    <span>Due:</span>
+                    <span>
+                      ₹{(editParticulars.reduce((s, p) => s + (Number(p.amount) || 0), 0)
+                        - editParticulars.reduce((s, p) => s + (Number(p.paidAmount) || 0), 0)).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           <div>
