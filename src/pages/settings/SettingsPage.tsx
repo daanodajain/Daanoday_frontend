@@ -73,8 +73,8 @@ export const SettingsPage: React.FC = () => {
   
   const isSuperAdmin = user?.roles?.some(role => role.name === 'SUPER_ADMIN');
   const hasStoreEditPermission = user?.roles?.some(role => 
-    role.permissions?.some(perm => perm.resource === 'stores' && perm.action === 'update')
-  );
+    role.permissions?.some(perm => perm.resource === 'store_settings' && perm.action === 'manage')
+  ) || isSuperAdmin;
 
   useEffect(() => {
     fetchSettings();
@@ -112,8 +112,11 @@ export const SettingsPage: React.FC = () => {
     try {
       if (currentStore) {
         const response = await apiService.get(`/stores/${currentStore.id}`);
-        if (response.DDMS_data?.store) {
-          setStoreInfo(response.DDMS_data.store);
+        // Backend returns the store row directly as DDMS_data (not nested
+        // under a "store" key) — that mismatch meant this never populated
+        // storeInfo, so the form always looked blank/unsaveable.
+        if (response.DDMS_data) {
+          setStoreInfo(response.DDMS_data);
         }
       }
     } catch (error) {

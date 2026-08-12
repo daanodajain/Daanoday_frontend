@@ -10,7 +10,7 @@ import { apiService } from '@/services/api';
 import toast from 'react-hot-toast';
 
 interface Props { isOpen: boolean; onClose: () => void; }
-interface Particular { particularId: string; particularName: string; amount: number; }
+interface Particular { particularId: string; particularName: string; amount: number; paidAmount?: number; }
 
 const today = () => new Date().toISOString().split('T')[0];
 
@@ -27,6 +27,7 @@ export const CreateReceiptModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
   const [receiptDate, setReceiptDate] = useState(today());
   const [isDue, setIsDue] = useState(false);
+  const [isPartial, setIsPartial] = useState(false);
   const [paymentMode, setPaymentMode] = useState('CASH');
   const [paymentDate, setPaymentDate] = useState(today());
   const [remarks, setRemarks] = useState('');
@@ -86,7 +87,7 @@ export const CreateReceiptModal: React.FC<Props> = ({ isOpen, onClose }) => {
     onError: (e: any) => toast.error(e?.response?.data?.DDMS_error_code || 'Failed to create receipt'),
   });
 
-  const addParticular = () => setParticulars([...particulars, { particularId: '', particularName: '', amount: 0 }]);
+  const addParticular = () => setParticulars([...particulars, { particularId: '', particularName: '', amount: 0, paidAmount: 0 }]);
   const removeParticular = (i: number) => setParticulars(particulars.filter((_, idx) => idx !== i));
 
   const updateParticular = (index: number, field: keyof Particular, value: any) => {
@@ -96,10 +97,20 @@ export const CreateReceiptModal: React.FC<Props> = ({ isOpen, onClose }) => {
       const p = (particularsList?.DDMS_data || []).find((p: any) => String(p.id) === String(value));
       if (p) updated[index].particularName = p.name;
     }
+    // Keep paidAmount defaulted to the full amount whenever amount changes,
+    // so a normal (non-partial) receipt doesn't need any extra input — user
+    // only needs to lower it when actually doing a partial payment.
+    if (field === 'amount') {
+      updated[index].paidAmount = Number(value) || 0;
+    }
     setParticulars(updated);
   };
 
   const totalAmount = particulars.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+  const totalPaidAmount = isPartial
+    ? particulars.reduce((sum, p) => sum + (Number(p.paidAmount) || 0), 0)
+    : totalAmount;
+  const remainingAmount = totalAmount - totalPaidAmount;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,19 +122,36 @@ export const CreateReceiptModal: React.FC<Props> = ({ isOpen, onClose }) => {
       toast.error('Add at least one particular with amount');
       return;
     }
+    if (isPartial) {
+      if (particulars.some(p => Number(p.paidAmount) < 0 || Number(p.paidAmount) > Number(p.amount))) {
+        toast.error('Paid amount per item cannot be negative or exceed the item amount');
+        return;
+      }
+      if (totalPaidAmount <= 0) {
+        toast.error('Partial payment must be greater than ₹0');
+        return;
+      }
+      if (totalPaidAmount >= totalAmount) {
+        toast.error('Partial payment must be less than the total amount — use a normal receipt instead if fully paid');
+        return;
+      }
+    }
     createMutation.mutate({
       customerMobile,
       customerName,
       receiptDate,
       isDue,
+      isPartial,
       paymentMode: isDue ? null : paymentMode,
       paymentDate: isDue ? null : paymentDate,
       remarks: remarks || null,
       totalAmount,
+      paidAmount: isPartial ? totalPaidAmount : undefined,
       particulars: particulars.map(p => ({
         particularId: p.particularId,
         particularName: p.particularName,
         amount: Number(p.amount),
+        paidAmount: isPartial ? Number(p.paidAmount) || 0 : undefined,
       })),
     });
   };
@@ -136,6 +164,7 @@ export const CreateReceiptModal: React.FC<Props> = ({ isOpen, onClose }) => {
     setShowSuggestions(false);
     setReceiptDate(today());
     setIsDue(false);
+    setIsPartial(false);
     setPaymentMode('CASH');
     setPaymentDate(today());
     setRemarks('');
@@ -195,15 +224,24 @@ export const CreateReceiptModal: React.FC<Props> = ({ isOpen, onClose }) => {
             onChange={(e) => setReceiptDate(e.target.value)}
             max={today()}
           />
-          <div className="flex items-end pb-1">
+          <div className="flex items-end pb-1 gap-4">
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input
                 type="checkbox"
                 className="w-4 h-4 accent-primary-600"
                 checked={isDue}
-                onChange={(e) => setIsDue(e.target.checked)}
+                onChange={(e) => { setIsDue(e.target.checked); if (e.target.checked) setIsPartial(false); }}
               />
-              <span className="text-sm font-medium text-secondary-700">Due Receipt (payment pending)</span>
+              <span className="text-sm font-medium text-secondary-700">Due Receipt (full due)</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                className="w-4 h-4 accent-primary-600"
+                checked={isPartial}
+                onChange={(e) => { setIsPartial(e.target.checked); if (e.target.checked) setIsDue(false); }}
+              />
+              <span className="text-sm font-medium text-secondary-700">Partial Payment</span>
             </label>
           </div>
         </div>
@@ -227,6 +265,19 @@ export const CreateReceiptModal: React.FC<Props> = ({ isOpen, onClose }) => {
               onChange={(e) => setPaymentDate(e.target.value)}
               max={today()}
             />
+            {isPartial && (
+              <div className="col-span-2 grid grid-cols-2 gap-4 pt-2 border-t border-secondary-200">
+                <div>
+                  <label className="block text-sm font-medium text-secondary-700 mb-1">Amount Paid</label>
+                  <div className="text-lg font-semibold text-primary-600">₹{totalPaidAmount.toLocaleString('en-IN')}</div>
+                  <p className="text-xs text-secondary-500">Adjust per-item paid amount below</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-secondary-700 mb-1">Remaining</label>
+                  <div className="text-lg font-semibold text-amber-600">₹{remainingAmount.toLocaleString('en-IN')}</div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -270,6 +321,18 @@ export const CreateReceiptModal: React.FC<Props> = ({ isOpen, onClose }) => {
                     required
                   />
                 </div>
+                {isPartial && (
+                  <div className="w-32">
+                    <Input
+                      label={index === 0 ? 'Paid (₹)' : ''}
+                      type="number"
+                      min="0"
+                      max={p.amount || 0}
+                      value={p.paidAmount ?? ''}
+                      onChange={(e) => updateParticular(index, 'paidAmount', Number(e.target.value))}
+                    />
+                  </div>
+                )}
                 <Button type="button" variant="ghost" size="sm" onClick={() => removeParticular(index)} className="mb-1">
                   <Trash2 className="w-4 h-4 text-red-500" />
                 </Button>
@@ -277,9 +340,23 @@ export const CreateReceiptModal: React.FC<Props> = ({ isOpen, onClose }) => {
             ))}
           </div>
           {particulars.length > 0 && (
-            <div className="mt-3 pt-3 border-t flex justify-between font-semibold">
-              <span>Total:</span>
-              <span className="text-lg text-primary-600">₹{totalAmount.toLocaleString('en-IN')}</span>
+            <div className="mt-3 pt-3 border-t space-y-1">
+              <div className="flex justify-between font-semibold">
+                <span>Total:</span>
+                <span className="text-lg text-primary-600">₹{totalAmount.toLocaleString('en-IN')}</span>
+              </div>
+              {isPartial && (
+                <>
+                  <div className="flex justify-between text-sm text-secondary-600">
+                    <span>Paid:</span>
+                    <span>₹{totalPaidAmount.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-medium text-amber-600">
+                    <span>Due:</span>
+                    <span>₹{remainingAmount.toLocaleString('en-IN')}</span>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>

@@ -116,9 +116,10 @@ export interface Receipt {
   customer_mobile: string;
   account_number: string;
   total_amount: number;
+  paid_amount: number;
   payment_mode: PaymentMode;
   receipt_state: ReceiptState;
-  status: 'UNPAID' | 'PAID';
+  status: 'UNPAID' | 'PARTIAL' | 'PAID';
   cancel_reason: string | null;
   created_by: string;
   created_by_name: string;
@@ -132,6 +133,7 @@ export interface ReceiptParticular {
   particular_id: string;
   particular_name: string;
   amount: number;
+  paid_amount: number;
 }
 
 // ── Challan ───────────────────────────────────────────────────

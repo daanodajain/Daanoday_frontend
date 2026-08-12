@@ -259,6 +259,11 @@ class ApiService {
     return response.data;
   }
 
+  async collectRemaining(receiptId: string, data: { paymentMode?: string; paymentDate?: string }) {
+    const response = await this.api.post<DDMSResponse>(`/receipts/${receiptId}/collect-remaining`, data);
+    return response.data;
+  }
+
   async generateReceiptPDF(receiptId: string) {
     const response = await this.api.get(`/receipts/${receiptId}/pdf`, {
       responseType: 'blob',

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Eye, Check, X, FileEdit, Trash2 } from 'lucide-react';
+import { Plus, Search, Eye, Check, X, FileEdit, Trash2, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -30,6 +30,8 @@ export const ReceiptsPage: React.FC = () => {
   const [changeRequestModal, setChangeRequestModal] = useState<{ receipt: Receipt; action: 'UPDATE' | 'DELETE' } | null>(null);
   const [changeReason, setChangeReason] = useState('');
   const [newData, setNewData] = useState<any>({});
+  const [collectModal, setCollectModal] = useState<Receipt | null>(null);
+  const [collectPaymentMode, setCollectPaymentMode] = useState('CASH');
 
   const { data, isLoading } = useQuery({
     queryKey: ['receipts', searchTerm],
@@ -42,11 +44,38 @@ export const ReceiptsPage: React.FC = () => {
     onError: (e: any) => toast.error(e.message || 'Failed to approve'),
   });
 
+  const collectRemainingMutation = useMutation({
+    mutationFn: ({ id, paymentMode }: { id: string; paymentMode: string }) =>
+      apiService.collectRemaining(id, { paymentMode }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['receipts'] });
+      toast.success('Remaining amount collected — receipt fully paid');
+      setCollectModal(null);
+    },
+    onError: (e: any) => toast.error(e?.response?.data?.DDMS_error_code || e.message || 'Failed to collect remaining amount'),
+  });
+
   const rejectMutation = useMutation({
     mutationFn: (id: string) => apiService.rejectReceipt(id),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['receipts'] }); toast.success('Receipt rejected'); },
     onError: (e: any) => toast.error(e.message || 'Failed to reject'),
   });
+
+  const handleDownloadPdf = async (receipt: Receipt) => {
+    try {
+      const blob = await apiService.generateReceiptPDF(String(receipt.id));
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${receipt.receipt_number}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to download receipt PDF');
+    }
+  };
 
   const changeRequestMutation = useMutation({
     mutationFn: (data: any) => apiService.createChangeRequest(data),
@@ -152,12 +181,28 @@ export const ReceiptsPage: React.FC = () => {
                         {receipt.receipt_state}
                       </span>
                     </td>
-                    <td className="table-cell">{receipt.payment_mode}</td>
+                    <td className="table-cell">
+                      {receipt.payment_mode}
+                      {receipt.status === 'PARTIAL' && (
+                        <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium text-amber-700 bg-amber-100">
+                          PARTIAL — ₹{(Number(receipt.total_amount) - Number(receipt.paid_amount || 0)).toLocaleString()} due
+                        </span>
+                      )}
+                    </td>
                     <td className="table-cell">
                       <div className="flex space-x-1">
                         <Button variant="ghost" size="sm" onClick={() => setSelectedReceipt(receipt)}>
                           <Eye className="w-4 h-4" />
                         </Button>
+                        <Button variant="ghost" size="sm" title="Download PDF" onClick={() => handleDownloadPdf(receipt)}>
+                          <Download className="w-4 h-4" />
+                        </Button>
+                        {receipt.status === 'PARTIAL' && canApprove('RECEIPT') && (
+                          <Button variant="ghost" size="sm" className="text-amber-600" title="Collect Remaining"
+                            onClick={() => { setCollectModal(receipt); setCollectPaymentMode(receipt.payment_mode || 'CASH'); }}>
+                            <span className="text-xs font-medium px-1">Collect</span>
+                          </Button>
+                        )}
                         {canApprove('RECEIPT') && receipt.receipt_state === 'PENDING_APPROVAL' && (
                           <>
                             <Button variant="ghost" size="sm" className="text-green-600"
@@ -195,6 +240,44 @@ export const ReceiptsPage: React.FC = () => {
       </Card>
 
       <CreateReceiptModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} />
+
+      {/* Collect Remaining Modal */}
+      <Modal isOpen={!!collectModal} onClose={() => setCollectModal(null)} title="Collect Remaining Amount">
+        {collectModal && (
+          <div className="space-y-4">
+            <div className="flex justify-between text-sm">
+              <span className="text-secondary-500">Total Amount</span>
+              <span className="font-medium">₹{Number(collectModal.total_amount).toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-secondary-500">Already Paid</span>
+              <span className="font-medium">₹{Number(collectModal.paid_amount || 0).toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between text-base border-t pt-2">
+              <span className="font-medium">Remaining Due</span>
+              <span className="font-bold text-amber-700">
+                ₹{(Number(collectModal.total_amount) - Number(collectModal.paid_amount || 0)).toLocaleString()}
+              </span>
+            </div>
+            <div>
+              <label className="form-label">Payment Mode</label>
+              <select className="form-input" value={collectPaymentMode} onChange={(e) => setCollectPaymentMode(e.target.value)}>
+                <option value="CASH">Cash</option>
+                <option value="CHEQUE">Cheque</option>
+                <option value="ONLINE">Online</option>
+              </select>
+            </div>
+            <div className="flex justify-end space-x-2 pt-2">
+              <Button variant="outline" onClick={() => setCollectModal(null)}>Cancel</Button>
+              <Button
+                onClick={() => collectRemainingMutation.mutate({ id: String(collectModal.id), paymentMode: collectPaymentMode })}
+                disabled={collectRemainingMutation.isPending}>
+                {collectRemainingMutation.isPending ? 'Collecting...' : 'Collect & Close Receipt'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* View Modal */}
       <Modal isOpen={!!selectedReceipt} onClose={() => setSelectedReceipt(null)}

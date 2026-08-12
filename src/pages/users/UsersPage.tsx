@@ -9,12 +9,14 @@ import { Select } from '@/components/ui/Select';
 import { Modal } from '@/components/ui/Modal';
 import { apiService } from '@/services/api';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useAuthStore } from '@/store/authStore';
 import toast from 'react-hot-toast';
 
 export const UsersPage: React.FC = () => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { canCreate, canUpdate, canDelete } = usePermissions();
+  const { user: currentUser } = useAuthStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
@@ -173,7 +175,9 @@ export const UsersPage: React.FC = () => {
                             onClick={() => { setSelectedUser(user); setSelectedRoleId(''); setShowRoleModal(true); }}>
                             <Shield className="w-4 h-4 text-blue-500" />
                           </Button>
-                          <Button variant="ghost" size="sm" title="Toggle Active"
+                          <Button variant="ghost" size="sm"
+                            title={String(user.id) === String(currentUser?.id) ? "You can't deactivate your own account" : "Toggle Active"}
+                            disabled={String(user.id) === String(currentUser?.id)}
                             onClick={() => toggleMutation.mutate(String(user.id))}>
                             {user.active
                               ? <ToggleRight className="w-4 h-4 text-green-500" />
