@@ -14,6 +14,7 @@ interface StoreSettings {
   smsEnabled: boolean;
   emailEnabled: boolean;
   receiptTemplate: string;
+  receiptHeaderText: string;
   paymentMethods: string;
   razorpayKeyId: string;
   razorpayKeySecret: string;
@@ -48,6 +49,7 @@ export const SettingsPage: React.FC = () => {
     smsEnabled: true,
     emailEnabled: true,
     receiptTemplate: '',
+    receiptHeaderText: '',
     paymentMethods: '["CASH","CHEQUE","ONLINE"]',
     razorpayKeyId: '',
     razorpayKeySecret: '',
@@ -458,11 +460,24 @@ export const SettingsPage: React.FC = () => {
               onChange={(e) => setSettings({...settings, receiptTemplate: e.target.value})}
               className="w-full p-2 border border-gray-300 rounded-md"
             >
-              <option value="DEFAULT">Default Template</option>
-              <option value="MODERN">Modern Template</option>
-              <option value="TRADITIONAL">Traditional Template</option>
-              <option value="MINIMAL">Minimal Template</option>
+              <option value="DEFAULT">Default (Blue Professional)</option>
+              <option value="MODERN">Modern (Dark + Orange)</option>
+              <option value="TRADITIONAL">Traditional (Ornate Border)</option>
+              <option value="MINIMAL">Minimal (Clean & Simple)</option>
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Receipt Header Text <span className="text-gray-400 font-normal">(optional)</span></label>
+            <input
+              type="text"
+              value={settings.receiptHeaderText || ''}
+              onChange={(e) => setSettings({...settings, receiptHeaderText: e.target.value})}
+              placeholder="e.g. Shri Ganesh Temple Trust  or  Donation Receipt"
+              className="w-full p-2 border border-gray-300 rounded-md text-sm"
+              maxLength={100}
+            />
+            <p className="text-xs text-gray-400 mt-1">This text appears below your temple name on the receipt PDF. Leave blank to skip.</p>
           </div>
           
           <div className="grid grid-cols-2 gap-4">
