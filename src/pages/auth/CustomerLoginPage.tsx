@@ -60,9 +60,9 @@ export const CustomerLoginPage: React.FC = () => {
         toast.error('Empty response from server');
         return;
       }
-      if (payload.DDMS_status === 'success') {
+      if (payload.status === 'SUCCESS') {
         const msg = payload?.DDMS_data?.message;
-        if (payload.DDMS_data?.requiresPassword) {
+        if (!payload.DDMS_data?.firstLogin) {
           toast.success(msg || 'Please enter your password');
           setStep('password');
           return;
@@ -71,7 +71,7 @@ export const CustomerLoginPage: React.FC = () => {
         setStep('otp');
         return;
       }
-      toast.error(payload?.DDMS_data?.message || 'Failed to send OTP');
+      toast.error(payload?.DDMS_error_code || 'Failed to send OTP');
     },
     onError: (error: any) => {
       const serverMsg = error?.response?.data?.DDMS_data?.message || error?.message;
@@ -89,13 +89,20 @@ export const CustomerLoginPage: React.FC = () => {
       });
     },
     onSuccess: (data) => {
-      if (data.DDMS_status === 'success') {
-        const { user, token, refreshToken } = data.DDMS_data;
-        setAuth(user, token, refreshToken);
+      if (data.status === 'SUCCESS') {
+        const { customer, token, refreshToken } = data.DDMS_data;
+        // Build auth user object from customer data
+        const authUser = { 
+          ...customer, 
+          roles: [], 
+          stores: [],
+          userType: 'CUSTOMER'
+        };
+        setAuth(authUser, token, refreshToken);
         toast.success('Login successful!');
-        navigate('/customer-dashboard');
+        navigate('/customer/dashboard');
       } else {
-        toast.error('Login failed');
+        toast.error(data.DDMS_error_code || 'Login failed');
       }
     },
     onError: (error: any) => {

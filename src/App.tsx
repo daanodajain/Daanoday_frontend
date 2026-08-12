@@ -39,14 +39,26 @@ const queryClient = new QueryClient({
   },
 });
 
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated } = useAuthStore();
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
+const ProtectedRoute: React.FC<{ children: React.ReactNode; customerOnly?: boolean }> = ({ children, customerOnly }) => {
+  const { isAuthenticated, user } = useAuthStore();
+  if (!isAuthenticated) {
+    return customerOnly ? <Navigate to="/customer/login" replace /> : <Navigate to="/login" replace />;
+  }
+  const isCustomer = (user as any)?.userType === 'CUSTOMER';
+  // Customer trying to access staff routes → redirect to customer dashboard
+  if (isCustomer && !customerOnly) return <Navigate to="/customer/dashboard" replace />;
+  // Staff trying to access customer routes → redirect to staff dashboard
+  if (!isCustomer && customerOnly) return <Navigate to="/dashboard" replace />;
+  return <>{children}</>;
 };
 
-const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated } = useAuthStore();
-  return !isAuthenticated ? <>{children}</> : <Navigate to="/dashboard" replace />;
+const PublicRoute: React.FC<{ children: React.ReactNode; customerRoute?: boolean }> = ({ children, customerRoute }) => {
+  const { isAuthenticated, user } = useAuthStore();
+  if (!isAuthenticated) return <>{children}</>;
+  // Customer logged in → customer dashboard, staff → staff dashboard
+  if ((user as any)?.userType === 'CUSTOMER') return <Navigate to="/customer/dashboard" replace />;
+  if (customerRoute) return <>{children}</>;
+  return <Navigate to="/dashboard" replace />;
 };
 
 const SessionManager: React.FC = () => {
@@ -83,8 +95,8 @@ const AppRoutes: React.FC = () => {
   return (
     <Routes>
       <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
-      <Route path="/customer/login" element={<PublicRoute><CustomerLoginPage /></PublicRoute>} />
-      <Route path="/customer/dashboard" element={<ProtectedRoute><CustomerDashboard /></ProtectedRoute>} />
+      <Route path="/customer/login" element={<PublicRoute customerRoute><CustomerLoginPage /></PublicRoute>} />
+      <Route path="/customer/dashboard" element={<ProtectedRoute customerOnly><CustomerDashboard /></ProtectedRoute>} />
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
