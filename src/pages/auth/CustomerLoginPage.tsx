@@ -91,15 +91,14 @@ export const CustomerLoginPage: React.FC = () => {
     onSuccess: (data) => {
       if (data.status === 'SUCCESS') {
         const { customer, token, refreshToken } = data.DDMS_data;
-        // Build auth user object from customer data
         const authUser = { 
-          ...customer, 
+          ...customer,
           roles: [], 
           stores: [],
-          userType: 'CUSTOMER'
+          userType: 'CUSTOMER' as const,
         };
         setAuth(authUser, token, refreshToken);
-        toast.success('Login successful!');
+        toast.success('Welcome! Redirecting...');
         navigate('/customer/dashboard');
       } else {
         toast.error(data.DDMS_error_code || 'Login failed');

@@ -10,8 +10,10 @@ export interface AuthUser {
   id: string;
   name: string;
   mobile: string;
+  email?: string;
   roles: UserRole[];
   stores: Store[];
+  userType?: 'STAFF' | 'CUSTOMER';
 }
 
 export interface UserRole {

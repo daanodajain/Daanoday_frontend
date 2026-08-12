@@ -10,6 +10,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   isSuperAdmin: boolean;
+  isCustomer: boolean;
   // Session Management
   isSessionWarningVisible: boolean;
   remainingTime: number;
@@ -50,6 +51,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       isAuthenticated: false,
       isLoading: false,
       isSuperAdmin: false,
+      isCustomer: false,
       // Session Management
       isSessionWarningVisible: false,
       remainingTime: 0,
@@ -61,12 +63,14 @@ export const useAuthStore = create<AuthState & AuthActions>()(
 
       setAuth: (user, token, refreshToken) => {
         const isSuperAdmin = user.roles?.some((r: any) => r.name === 'SUPER_ADMIN') ?? false;
+        const isCustomer = user.userType === 'CUSTOMER';
         set({
           user,
           token,
           refreshToken,
           isAuthenticated: true,
           isSuperAdmin,
+          isCustomer,
           // SUPER_ADMIN has no store — set null, dashboard handles it
           currentStore: user.stores?.[0] || null,
           isSessionWarningVisible: false,
@@ -98,6 +102,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
             currentStore: null,
             isAuthenticated: false,
             isSuperAdmin: false,
+            isCustomer: false,
             isSessionWarningVisible: false,
             remainingTime: 0,
             lastActivityTime: Date.now(),
@@ -154,6 +159,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         currentStore: state.currentStore,
         isAuthenticated: state.isAuthenticated,
         isSuperAdmin: state.isSuperAdmin,
+        isCustomer: state.isCustomer,
       }),
     }
   )
