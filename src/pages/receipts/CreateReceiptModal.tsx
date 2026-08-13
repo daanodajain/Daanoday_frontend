@@ -184,11 +184,13 @@ export const CreateReceiptModal: React.FC<Props> = ({ isOpen, onClose }) => {
               type="tel"
               value={customerMobile}
               onChange={(e) => {
-                setCustomerMobile(e.target.value);
+                const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                setCustomerMobile(val);
                 setSelectedCustomerId(null);
                 setCustomerName('');
               }}
-              placeholder="Enter mobile to search"
+              placeholder="10-digit mobile number"
+              maxLength={10}
               autoComplete="off"
             />
             {showSuggestions && customerSuggestions.length > 0 && (

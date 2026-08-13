@@ -129,7 +129,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
           {/* User Info & Logout */}
           <div className="border-t border-secondary-200 p-4">
-            <div className="flex items-center mb-3">
+            <NavLink
+              to="/profile"
+              onClick={onClose}
+              className="flex items-center mb-3 hover:bg-secondary-50 rounded-lg p-2 -mx-2 transition-colors"
+            >
               <div className={clsx('w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold mr-3',
                 isSuperAdmin ? 'bg-purple-600' : 'bg-primary-600'
               )}>
@@ -139,7 +143,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 <p className="text-sm font-medium text-secondary-900 truncate">{user?.name}</p>
                 <p className="text-xs text-secondary-500 truncate">{user?.email || user?.mobile}</p>
               </div>
-            </div>
+            </NavLink>
             
             <div className="space-y-1">
               <NavLink

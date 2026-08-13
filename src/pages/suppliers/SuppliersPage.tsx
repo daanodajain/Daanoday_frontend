@@ -211,8 +211,14 @@ export const SuppliersPage: React.FC = () => {
           />
           <Input
             label="Phone *"
+            type="tel"
             value={formData.phone}
-            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            onChange={(e) => {
+              const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+              setFormData({ ...formData, phone: val });
+            }}
+            placeholder="10-digit phone number"
+            maxLength={10}
             required
           />
           <Input

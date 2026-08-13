@@ -91,16 +91,19 @@ export const UsersPage: React.FC = () => {
 
   const users = usersData?.DDMS_data || [];
 
-  // FIX: Dropdown se SUPER_ADMIN ko filter kar diya taaki Store Admin ise select na kar sake
+  // Exclude self + SUPER_ADMIN from list
   const roles = (rolesData?.DDMS_data || []).filter(
     (role: any) => role.name.toUpperCase() !== 'SUPER_ADMIN'
   );
 
-  const filtered = users.filter((u: any) =>
-    u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    u.mobile?.includes(searchTerm) ||
-    u.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filtered = users
+    .filter((u: any) => String(u.id) !== String(currentUser?.id)) // exclude self
+    .filter((u: any) => u.role_name?.toUpperCase() !== 'SUPER_ADMIN') // exclude super admin
+    .filter((u: any) =>
+      u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      u.mobile?.includes(searchTerm) ||
+      u.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
   if (isLoading) return <div className="animate-pulse p-6">Loading users...</div>;
 
@@ -168,26 +171,28 @@ export const UsersPage: React.FC = () => {
                     <div className="flex space-x-1">
                       {canUpdate('users') && (
                         <>
-                          <Button variant="ghost" size="sm" title="Edit" onClick={() => handleEdit(user)}>
-                            <Edit className="w-4 h-4" />
+                          <Button variant="ghost" size="sm" title="Edit User"
+                            onClick={() => handleEdit(user)}>
+                            <Edit className="w-4 h-4 text-blue-500" />
                           </Button>
                           <Button variant="ghost" size="sm" title="Assign Role"
                             onClick={() => { setSelectedUser(user); setSelectedRoleId(''); setShowRoleModal(true); }}>
-                            <Shield className="w-4 h-4 text-blue-500" />
+                            <Shield className="w-4 h-4 text-purple-500" />
                           </Button>
-                          <Button variant="ghost" size="sm"
-                            title={String(user.id) === String(currentUser?.id) ? "You can't deactivate your own account" : "Toggle Active"}
-                            disabled={String(user.id) === String(currentUser?.id)}
-                            onClick={() => toggleMutation.mutate(String(user.id))}>
-                            {user.active
-                              ? <ToggleRight className="w-4 h-4 text-green-500" />
-                              : <ToggleLeft className="w-4 h-4 text-gray-400" />}
-                          </Button>
+                          {String(user.id) !== String(currentUser?.id) && (
+                            <Button variant="ghost" size="sm"
+                              title={user.active ? 'Deactivate User' : 'Activate User'}
+                              onClick={() => toggleMutation.mutate(String(user.id))}>
+                              {user.active
+                                ? <ToggleRight className="w-4 h-4 text-green-500" />
+                                : <ToggleLeft className="w-4 h-4 text-gray-400" />}
+                            </Button>
+                          )}
                         </>
                       )}
-                      {canDelete('users') && (
-                        <Button variant="ghost" size="sm"
-                          onClick={() => { if (window.confirm('Delete this user?')) deleteMutation.mutate(String(user.id)); }}>
+                      {canDelete('users') && String(user.id) !== String(currentUser?.id) && (
+                        <Button variant="ghost" size="sm" title="Delete User"
+                          onClick={() => { if (window.confirm(`Delete user "${user.name}"?`)) deleteMutation.mutate(String(user.id)); }}>
                           <Trash2 className="w-4 h-4 text-red-500" />
                         </Button>
                       )}
@@ -204,7 +209,14 @@ export const UsersPage: React.FC = () => {
       <Modal isOpen={showModal} onClose={handleClose} title={editingUser ? 'Edit User' : 'Create User'}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input label="Full Name *" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
-          <Input label="Mobile Number" type="tel" value={formData.mobile} onChange={(e) => setFormData({ ...formData, mobile: e.target.value })} placeholder="10-digit mobile number" />
+          <Input label="Mobile Number" type="tel" value={formData.mobile}
+            onChange={(e) => {
+              const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+              setFormData({ ...formData, mobile: val });
+            }}
+            placeholder="10-digit mobile number"
+            maxLength={10}
+          />
           <Input label="Email Address" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="user@example.com" />
           {!editingUser && (
             <>

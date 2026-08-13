@@ -23,7 +23,7 @@ import { NewsPage } from '@/pages/news/NewsPage';
 import { SettingsPage } from '@/pages/settings/SettingsPage';
 import { AuditLogsPage } from '@/pages/audit/AuditLogsPage';
 import { ChangeRequestsPage } from '@/pages/change-requests/ChangeRequestsPage';
-import { SuperAdminSubscriptionsPage } from '@/pages/super-admin/SuperAdminSubscriptionsPage';
+import { ProfilePage } from '@/pages/profile/ProfilePage';
 import { SuperAdminSystemSettingsPage } from '@/pages/super-admin/SuperAdminSystemSettingsPage';
 import { RequireStore } from '@/components/common/RequireStore';
 import { useAuthStore } from '@/store/authStore';
@@ -114,6 +114,7 @@ const AppRoutes: React.FC = () => {
         <Route path="settings" element={<RequireStore><SettingsPage /></RequireStore>} />
         <Route path="audit" element={<RequireStore><AuditLogsPage /></RequireStore>} />
         <Route path="change-requests" element={<RequireStore><ChangeRequestsPage /></RequireStore>} />
+        <Route path="profile" element={<ProfilePage />} />
         <Route path="super-admin/subscriptions" element={<SuperAdminSubscriptionsPage />} />
         <Route path="super-admin/settings" element={<SuperAdminSystemSettingsPage />} />
       </Route>

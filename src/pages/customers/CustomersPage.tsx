@@ -142,7 +142,13 @@ export const CustomersPage: React.FC = () => {
           <Input label={`${t('customer.name')} *`} value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
           <Input label={`${t('customer.mobile')} *`} type="tel" value={formData.mobile}
-            onChange={(e) => setFormData({ ...formData, mobile: e.target.value })} required />
+            onChange={(e) => {
+              const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+              setFormData({ ...formData, mobile: val });
+            }}
+            placeholder="10-digit mobile number"
+            maxLength={10}
+            required />
           <Input label="Email" type="email" value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
           <Input label="Address" value={formData.address}

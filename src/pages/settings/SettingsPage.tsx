@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -142,11 +143,12 @@ export const SettingsPage: React.FC = () => {
   const updateStoreInfo = async () => {
     setStoreLoading(true);
     try {
-      await apiService.put(`/stores/${storeInfo.id}`, storeInfo);
-      alert('Store information updated successfully!');
-    } catch (error) {
-      console.error('Failed to update store info:', error);
-      alert('Failed to update store information');
+      const currentStore = useAuthStore.getState().currentStore;
+      const storeId = storeInfo.id || currentStore?.id;
+      await apiService.put(`/stores/${storeId}`, storeInfo);
+      toast.success('Store information updated successfully!');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.DDMS_error_code || 'Failed to update store information');
     } finally {
       setStoreLoading(false);
     }
@@ -176,8 +178,13 @@ export const SettingsPage: React.FC = () => {
                 <label className="block text-sm font-medium mb-1">Contact Number</label>
                 <Input
                   value={storeInfo.contact}
-                  onChange={(e) => setStoreInfo({...storeInfo, contact: e.target.value})}
-                  placeholder="Contact Number"
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setStoreInfo({...storeInfo, contact: val});
+                  }}
+                  placeholder="10-digit contact number"
+                  maxLength={10}
+                  type="tel"
                 />
               </div>
             </div>
