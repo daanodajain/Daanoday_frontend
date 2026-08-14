@@ -112,9 +112,11 @@ export const LoginPage: React.FC = () => {
       {/* First Login — Change Password Popup */}
       <Modal
         isOpen={showChangeModal}
-        onClose={() => {}} // Cannot close — mandatory
+        onClose={() => {}}
         title=""
         size="sm"
+        showCloseButton={false}
+        closeOnBackdrop={false}
       >
         <div className="text-center mb-6">
           <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">

@@ -143,7 +143,6 @@ export const SettingsPage: React.FC = () => {
   const updateStoreInfo = async () => {
     setStoreLoading(true);
     try {
-      const currentStore = useAuthStore.getState().currentStore;
       const storeId = storeInfo.id || currentStore?.id;
       await apiService.put(`/stores/${storeId}`, storeInfo);
       toast.success('Store information updated successfully!');

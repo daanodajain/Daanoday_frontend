@@ -8,6 +8,8 @@ interface ModalProps {
   title?: string;
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  showCloseButton?: boolean;
+  closeOnBackdrop?: boolean;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -16,6 +18,8 @@ export const Modal: React.FC<ModalProps> = ({
   title,
   children,
   size = 'md',
+  showCloseButton = true,
+  closeOnBackdrop = true,
 }) => {
   if (!isOpen) return null;
 
@@ -31,7 +35,7 @@ export const Modal: React.FC<ModalProps> = ({
       <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
         <div
           className="fixed inset-0 transition-opacity bg-secondary-500 bg-opacity-75"
-          onClick={onClose}
+          onClick={closeOnBackdrop ? onClose : undefined}
         />
 
         <span className="hidden sm:inline-block sm:align-middle sm:h-screen">
@@ -50,12 +54,14 @@ export const Modal: React.FC<ModalProps> = ({
                 {title}
               </h3>
             )}
-            <button
-              onClick={onClose}
-              className="text-secondary-400 hover:text-secondary-600 focus:outline-none focus:text-secondary-600"
-            >
-              <X className="w-6 h-6" />
-            </button>
+            {showCloseButton && (
+              <button
+                onClick={onClose}
+                className="text-secondary-400 hover:text-secondary-600 focus:outline-none focus:text-secondary-600 ml-auto"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            )}
           </div>
           {children}
         </div>
