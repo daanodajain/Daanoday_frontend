@@ -25,6 +25,7 @@ import { AuditLogsPage } from '@/pages/audit/AuditLogsPage';
 import { ChangeRequestsPage } from '@/pages/change-requests/ChangeRequestsPage';
 import { ProfilePage } from '@/pages/profile/ProfilePage';
 import { SuperAdminSystemSettingsPage } from '@/pages/super-admin/SuperAdminSystemSettingsPage';
+import { SuperAdminSubscriptionsPage } from '@/pages/super-admin/SuperAdminSubscriptionsPage';
 import { RequireStore } from '@/components/common/RequireStore';
 import { useAuthStore } from '@/store/authStore';
 import { apiService } from '@/services/api';
