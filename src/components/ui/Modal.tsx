@@ -43,6 +43,9 @@ export const Modal: React.FC<ModalProps> = ({
         </span>
 
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={title || 'Dialog'}
           className={clsx(
             'inline-block w-full p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-lg',
             sizes[size]
