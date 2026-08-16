@@ -166,16 +166,16 @@ export const SettingsPage: React.FC = () => {
           <div className="p-6 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Store Name</label>
                 <Input
+                  label="Store Name"
                   value={storeInfo.name}
                   onChange={(e) => setStoreInfo({...storeInfo, name: e.target.value})}
                   placeholder="Store Name"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Contact Number</label>
                 <Input
+                  label="Contact Number"
                   value={storeInfo.contact}
                   onChange={(e) => {
                     const val = e.target.value.replace(/\D/g, '').slice(0, 10);
@@ -189,8 +189,8 @@ export const SettingsPage: React.FC = () => {
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-1">Email</label>
               <Input
+                label="Email"
                 value={storeInfo.email}
                 onChange={(e) => setStoreInfo({...storeInfo, email: e.target.value})}
                 placeholder="Store Email"
@@ -198,8 +198,8 @@ export const SettingsPage: React.FC = () => {
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-1">Address</label>
               <Input
+                label="Address"
                 value={storeInfo.address}
                 onChange={(e) => setStoreInfo({...storeInfo, address: e.target.value})}
                 placeholder="Store Address"
@@ -208,16 +208,16 @@ export const SettingsPage: React.FC = () => {
             
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1">City</label>
                 <Input
+                  label="City"
                   value={storeInfo.city}
                   onChange={(e) => setStoreInfo({...storeInfo, city: e.target.value})}
                   placeholder="City"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">State</label>
                 <Input
+                  label="State"
                   value={storeInfo.state}
                   onChange={(e) => setStoreInfo({...storeInfo, state: e.target.value})}
                   placeholder="State"
