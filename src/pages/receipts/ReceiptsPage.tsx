@@ -247,13 +247,13 @@ export const ReceiptsPage: React.FC = () => {
                         <Button variant="ghost" size="sm" title="Download PDF" onClick={() => handleDownloadPdf(receipt)}>
                           <Download className="w-4 h-4" />
                         </Button>
-                        {receipt.status === 'PARTIAL' && canApprove('RECEIPT') && (
+                        {receipt.status === 'PARTIAL' && canApprove('receipts') && (
                           <Button variant="ghost" size="sm" className="text-amber-600" title="Collect Remaining"
                             onClick={() => { setCollectModal(receipt); setCollectPaymentMode(receipt.payment_mode || 'CASH'); }}>
                             <span className="text-xs font-medium px-1">Collect</span>
                           </Button>
                         )}
-                        {canApprove('RECEIPT') && receipt.receipt_state === 'PENDING_APPROVAL' && (
+                        {canApprove('receipts') && receipt.receipt_state === 'PENDING_APPROVAL' && (
                           <>
                             <Button variant="ghost" size="sm" className="text-green-600" title="Approve"
                               onClick={() => approveMutation.mutate(receipt.id)}

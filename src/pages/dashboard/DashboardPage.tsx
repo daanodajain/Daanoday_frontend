@@ -139,7 +139,7 @@ export const DashboardPage: React.FC = () => {
           </div>
         </Card>
 
-        {canApprove('RECEIPT') && (
+        {canApprove('receipts') && (
           <Card>
             <CardHeader><CardTitle>Pending Approvals ({pendingReceipts.length})</CardTitle></CardHeader>
             <div className="p-6 pt-0 space-y-3">
