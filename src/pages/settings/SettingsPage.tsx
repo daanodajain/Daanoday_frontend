@@ -114,10 +114,11 @@ export const SettingsPage: React.FC = () => {
   const fetchStoreInfo = async () => {
     try {
       if (currentStore) {
-        const response = await apiService.get(`/stores/${currentStore.id}`);
-        // Backend returns the store row directly as DDMS_data (not nested
-        // under a "store" key) — that mismatch meant this never populated
-        // storeInfo, so the form always looked blank/unsaveable.
+        // GET /stores (no id) — the backend resolves the store from the
+        // x-store-id header via storeContext middleware. GET /stores/:id
+        // is not a route that exists; calling it 404'd silently here,
+        // leaving every field in this form permanently blank.
+        const response = await apiService.get('/stores');
         if (response.DDMS_data) {
           setStoreInfo(response.DDMS_data);
         }

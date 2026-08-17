@@ -184,11 +184,11 @@ export const ChangeRequestsPage: React.FC = () => {
                         </Button>
                         {canApprove('change_requests') && cr.status === 'PENDING' && (
                           <>
-                            <Button variant="ghost" size="sm" className="text-green-600"
+                            <Button variant="ghost" size="sm" className="text-green-600" title="Review & Approve"
                               onClick={() => { setSelectedCR(cr); setReviewNote(''); }}>
                               <Check className="w-4 h-4" />
                             </Button>
-                            <Button variant="ghost" size="sm" className="text-red-600"
+                            <Button variant="ghost" size="sm" className="text-red-600" title="Review & Reject"
                               onClick={() => { setSelectedCR(cr); setReviewNote(''); }}>
                               <X className="w-4 h-4" />
                             </Button>

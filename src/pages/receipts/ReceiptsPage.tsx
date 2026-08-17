@@ -255,12 +255,12 @@ export const ReceiptsPage: React.FC = () => {
                         )}
                         {canApprove('RECEIPT') && receipt.receipt_state === 'PENDING_APPROVAL' && (
                           <>
-                            <Button variant="ghost" size="sm" className="text-green-600"
+                            <Button variant="ghost" size="sm" className="text-green-600" title="Approve"
                               onClick={() => approveMutation.mutate(receipt.id)}
                               disabled={approveMutation.isPending}>
                               <Check className="w-4 h-4" />
                             </Button>
-                            <Button variant="ghost" size="sm" className="text-red-600"
+                            <Button variant="ghost" size="sm" className="text-red-600" title="Reject"
                               onClick={() => rejectMutation.mutate(receipt.id)}
                               disabled={rejectMutation.isPending}>
                               <X className="w-4 h-4" />
@@ -269,11 +269,11 @@ export const ReceiptsPage: React.FC = () => {
                         )}
                         {receipt.receipt_state !== 'CANCELLED' && receipt.receipt_state !== 'REJECTED' && (
                           <>
-                            <Button variant="ghost" size="sm" className="text-blue-600"
+                            <Button variant="ghost" size="sm" className="text-blue-600" title="Edit"
                               onClick={() => handleOpenEdit(receipt)}>
                               <FileEdit className="w-4 h-4" />
                             </Button>
-                            <Button variant="ghost" size="sm" className="text-red-600"
+                            <Button variant="ghost" size="sm" className="text-red-600" title="Delete"
                               onClick={() => setChangeRequestModal({ receipt, action: 'DELETE' })}>
                               <Trash2 className="w-4 h-4" />
                             </Button>
