@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -19,6 +19,14 @@ export const CustomerLoginPage: React.FC = () => {
   const { setAuth } = useAuthStore();
   const [step, setStep] = useState<LoginStep>('mobile');
   const [mobile, setMobile] = useState('');
+
+  // Fetch login config (OTP enabled/disabled)
+  const { data: configData } = useQuery({
+    queryKey: ['customer-login-config'],
+    queryFn: () => apiService.get('/customer-auth/config'),
+    staleTime: 5 * 60 * 1000,
+  });
+  const otpEnabled: boolean = configData?.DDMS_data?.otpEnabled ?? true;
 
   const {
     register,
@@ -61,14 +69,23 @@ export const CustomerLoginPage: React.FC = () => {
         return;
       }
       if (payload.status === 'SUCCESS') {
-        const msg = payload?.DDMS_data?.message;
-        if (!payload.DDMS_data?.firstLogin) {
-          toast.success(msg || 'Please enter your password');
+        const data = payload?.DDMS_data;
+        if (!data?.firstLogin) {
+          // Returning customer — password step
+          toast.success('Please enter your password');
           setStep('password');
           return;
         }
-        toast.success(msg || 'OTP sent successfully');
-        setStep('otp');
+        // First login
+        if (data?.otpEnabled === false) {
+          // OTP OFF — directly set password
+          toast.success('Please set your password');
+          setStep('setup-password');
+        } else {
+          // OTP ON — verify OTP first
+          toast.success(data?.message || 'OTP sent successfully');
+          setStep('otp');
+        }
         return;
       }
       toast.error(payload?.DDMS_error_code || 'Failed to send OTP');
