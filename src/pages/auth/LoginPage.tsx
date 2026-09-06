@@ -45,14 +45,20 @@ export const LoginPage: React.FC = () => {
           return;
         }
         toast.success('Login successful!');
-        navigate('/dashboard');
+        // Same form for everyone — backend tells us who just logged in.
+        navigate(user?.userType === 'CUSTOMER' ? '/customer/dashboard' : '/dashboard');
       } else {
         toast.error('Login failed');
       }
     },
-    onError: (error: any) => {
-      const msg = error?.response?.data?.DDMS_error_code || error?.message || 'Login failed';
-      toast.error(typeof msg === 'string' ? msg : 'Invalid credentials');
+    onError: (error: any, variables) => {
+      const code = error?.response?.data?.DDMS_error_code || error?.message;
+      if (code === 'CUSTOMER_FIRST_LOGIN_SETUP_REQUIRED') {
+        toast('Pehli baar login? OTP se apna account set up karein.', { icon: 'ℹ️' });
+        navigate('/customer/login', { state: { identifier: variables?.identifier } });
+        return;
+      }
+      toast.error(typeof code === 'string' ? code : 'Invalid credentials');
     },
   });
 
@@ -100,7 +106,7 @@ export const LoginPage: React.FC = () => {
         <div className="text-center">
           <h1 className="text-3xl font-bold text-primary-600 mb-2">Daanoday</h1>
           <h2 className="text-xl font-semibold text-secondary-900">Login</h2>
-          <p className="mt-2 text-sm text-secondary-600">Temple Donation Management System</p>
+          <p className="mt-2 text-sm text-secondary-600">Staff aur Customer, dono yahin se login karein</p>
         </div>
 
         <Card className="p-8">
@@ -125,6 +131,15 @@ export const LoginPage: React.FC = () => {
               Login
             </Button>
           </form>
+          <div className="text-center mt-4">
+            <button
+              type="button"
+              onClick={() => navigate('/customer/login')}
+              className="text-sm text-primary-600 hover:text-primary-500"
+            >
+              Pehli baar customer login (OTP se account set up karein)
+            </button>
+          </div>
         </Card>
       </div>
 

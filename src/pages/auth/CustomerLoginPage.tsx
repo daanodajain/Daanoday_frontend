@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/Button';
@@ -11,14 +11,21 @@ import { apiService } from '@/services/api';
 import { useAuthStore } from '@/store/authStore';
 import { LoginFormData } from '@/types';
 
-type LoginStep = 'mobile' | 'otp' | 'password' | 'setup-password';
+type LoginStep = 'identifier' | 'otp' | 'password' | 'setup-password';
+
+// Mobile: 10 digits starting 6-9. Email: standard shape. Either is accepted
+// everywhere a customer identifies themselves (send-otp, login).
+const IDENTIFIER_PATTERN = /^([6-9]\d{9}|[^\s@]+@[^\s@]+\.[^\s@]+)$/;
 
 export const CustomerLoginPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { setAuth } = useAuthStore();
-  const [step, setStep] = useState<LoginStep>('mobile');
-  const [mobile, setMobile] = useState('');
+  const [step, setStep] = useState<LoginStep>('identifier');
+  // Prefilled when unified /login redirects a not-yet-set-up customer here.
+  const prefillIdentifier = (location.state as { identifier?: string } | null)?.identifier || '';
+  const [identifier, setIdentifier] = useState(prefillIdentifier);
 
   // Fetch login config (OTP enabled/disabled)
   const { data: configData } = useQuery({
@@ -39,7 +46,7 @@ export const CustomerLoginPage: React.FC = () => {
   } = useForm<LoginFormData>({
     mode: 'onSubmit',
     defaultValues: {
-      mobile: '',
+      identifier: prefillIdentifier,
       otp: '',
       password: '',
       newPassword: '',
@@ -52,9 +59,9 @@ export const CustomerLoginPage: React.FC = () => {
   }, [step, clearErrors]);
 
   const sendOtpMutation = useMutation({
-    mutationFn: async (mobile: string) => {
+    mutationFn: async (identifier: string) => {
       try {
-        const payload = await apiService.post('/customer-auth/send-otp', { mobile });
+        const payload = await apiService.post('/customer-auth/send-otp', { identifier });
         return payload;
       } catch (err: any) {
         if (err?.response?.data) {
@@ -99,7 +106,7 @@ export const CustomerLoginPage: React.FC = () => {
   const loginMutation = useMutation({
     mutationFn: (data: LoginFormData) => {
       return apiService.post('/customer-auth/login', {
-        mobile: data.mobile,
+        identifier: data.identifier,
         password: data.password,
         otp: data.otp,
         newPassword: data.newPassword,
@@ -127,14 +134,14 @@ export const CustomerLoginPage: React.FC = () => {
     },
   });
 
-  const handleMobileSubmit = async (data: LoginFormData) => {
-    setMobile(data.mobile);
+  const handleIdentifierSubmit = async (data: LoginFormData) => {
+    setIdentifier(data.identifier);
     if (sendOtpMutation.isPending) return;
 
     try {
-      await sendOtpMutation.mutateAsync(data.mobile);
+      await sendOtpMutation.mutateAsync(data.identifier);
     } catch (err) {
-      console.error('handleMobileSubmit caught error ->', err);
+      console.error('handleIdentifierSubmit caught error ->', err);
     }
   };
 
@@ -145,14 +152,14 @@ export const CustomerLoginPage: React.FC = () => {
 
   const handlePasswordSubmit = (data: LoginFormData) => {
     loginMutation.mutate({
-      mobile,
+      identifier,
       password: data.password,
     });
   };
 
   const handlePasswordSetup = (data: LoginFormData) => {
     loginMutation.mutate({
-      mobile,
+      identifier,
       otp: data.otp,
       newPassword: data.newPassword,
     });
@@ -160,11 +167,11 @@ export const CustomerLoginPage: React.FC = () => {
 
   const goBack = () => {
     if (step === 'otp') {
-      setStep('mobile');
-      reset({ mobile: getValues('mobile') });
+      setStep('identifier');
+      reset({ identifier: getValues('identifier') });
     } else if (step === 'password') {
-      setStep('mobile');
-      reset({ mobile: getValues('mobile') });
+      setStep('identifier');
+      reset({ identifier: getValues('identifier') });
     } else if (step === 'setup-password') {
       setStep('otp');
     }
@@ -185,28 +192,27 @@ export const CustomerLoginPage: React.FC = () => {
 
         <Card className="p-8">
           <form onSubmit={(e) => e.preventDefault()} className="space-y-6" noValidate>
-            {step === 'mobile' && (
+            {step === 'identifier' && (
               <>
                 <Input
-                  label="Mobile Number"
-                  type="tel"
-                  {...register('mobile', {
-                    required: 'Mobile number is required',
+                  label="Mobile Number or Email"
+                  type="text"
+                  {...register('identifier', {
+                    required: 'Mobile number or email is required',
                     pattern: {
-                      value: /^[6-9]\d{9}$/,
-                      message: 'Please enter valid 10-digit mobile number',
+                      value: IDENTIFIER_PATTERN,
+                      message: 'Enter a valid 10-digit mobile number or email',
                     }
                   })}
-                  error={errors.mobile?.message}
-                  placeholder="Enter your registered mobile number"
-                  autoComplete="tel"
-                  maxLength={10}
+                  error={errors.identifier?.message}
+                  placeholder="Enter your registered mobile number or email"
+                  autoComplete="username"
                 />
                 <Button
                   type="button"
                   className="w-full"
                   loading={sendOtpMutation.isPending}
-                  onClick={handleSubmit(handleMobileSubmit)}
+                  onClick={handleSubmit(handleIdentifierSubmit)}
                 >
                   Send OTP
                 </Button>
@@ -226,7 +232,7 @@ export const CustomerLoginPage: React.FC = () => {
               <>
                 <div className="text-center">
                   <p className="text-sm text-secondary-600">
-                    OTP sent to {mobile}
+                    OTP sent to {identifier}
                   </p>
                 </div>
                 <Input
@@ -368,7 +374,7 @@ export const CustomerLoginPage: React.FC = () => {
             <div className="mt-4 text-center">
               <button
                 type="button"
-                onClick={() => sendOtpMutation.mutate(mobile)}
+                onClick={() => sendOtpMutation.mutate(identifier)}
                 disabled={sendOtpMutation.isPending}
                 className="text-sm text-primary-600 hover:text-primary-500"
               >

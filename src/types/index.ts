@@ -281,7 +281,7 @@ export interface PaymentModeData {
 
 // ── Form helpers ──────────────────────────────────────────────
 export interface LoginFormData {
-  mobile: string;
+  identifier: string;
   password?: string;
   otp?: string;
   newPassword?: string;
