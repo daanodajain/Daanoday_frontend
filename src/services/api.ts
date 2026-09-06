@@ -572,8 +572,8 @@ class ApiService {
     return await this.post('/customer-profile/change-password', { currentPassword, newPassword });
   }
 
-  async customerRequestCashPayment(receiptId: string) {
-    return await this.post('/customer-profile/request-cash-payment', { receiptId });
+  async customerRequestCashPayment(receiptId: string, amount: number, storeId: string) {
+    return await this.post('/customer-payments/request-cash-payment', { receiptId, amount, storeId });
   }
 
   async customerCancelCashRequest(receiptId: string) {
