@@ -12,33 +12,36 @@ import { apiService } from '@/services/api';
 import { useAuthStore } from '@/store/authStore';
 
 interface LoginForm { identifier: string; password: string; }
+interface OtpForm { otp: string; }
 interface ChangePasswordForm { newPassword: string; confirmPassword: string; }
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
-  const [showChangeModal, setShowChangeModal] = useState(false);
+
+  // modal steps: null → 'otp' → 'password'
+  const [modalStep, setModalStep] = useState<null | 'otp' | 'password'>(null);
+  const [otpEnabled, setOtpEnabled] = useState(false);
   const [showNewPass, setShowNewPass] = useState(false);
   const [showConfirmPass, setShowConfirmPass] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>();
+  const { register: regOtp, handleSubmit: handleOtp, formState: { errors: errorsOtp } } = useForm<OtpForm>();
   const {
-    register: regCP,
-    handleSubmit: handleCP,
-    formState: { errors: errorsCP },
-    watch,
-    reset: resetCP,
+    register: regCP, handleSubmit: handleCP,
+    formState: { errors: errorsCP }, watch,
   } = useForm<ChangePasswordForm>();
 
   const loginMutation = useMutation({
     mutationFn: async (data: LoginForm) => apiService.login(data.identifier, data.password),
     onSuccess: (data) => {
       if (data?.status === 'SUCCESS') {
-        const { user, token, refreshToken, roles, stores, requirePasswordChange: rpc } = data.DDMS_data;
+        const { user, token, refreshToken, roles, stores, requirePasswordChange: rpc, otpEnabled: otp } = data.DDMS_data;
         const authUser = { ...user, roles: roles || [], stores: stores || [] };
         setAuth(authUser, token, refreshToken);
         if (rpc) {
-          setShowChangeModal(true); // Show popup instead of replacing login form
+          setOtpEnabled(!!otp);
+          setModalStep(otp ? 'otp' : 'password');
           return;
         }
         toast.success('Login successful!');
@@ -53,6 +56,21 @@ export const LoginPage: React.FC = () => {
     },
   });
 
+  // Staff OTP verify — call backend to verify OTP before allowing password set
+  const otpMutation = useMutation({
+    mutationFn: async ({ otp }: OtpForm) => apiService.post('/auth/verify-first-login-otp', { otp }),
+    onSuccess: (data) => {
+      if (data?.status === 'SUCCESS') {
+        setModalStep('password');
+      } else {
+        toast.error(data?.DDMS_error_code || 'Invalid OTP');
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.DDMS_error_code || 'Invalid OTP');
+    },
+  });
+
   const changePasswordMutation = useMutation({
     mutationFn: async (data: ChangePasswordForm) => apiService.changePassword(data.newPassword),
     onSuccess: (data) => {
@@ -60,7 +78,7 @@ export const LoginPage: React.FC = () => {
         const { user, token, refreshToken, roles, stores } = data.DDMS_data;
         const authUser = { ...user, roles: roles || [], stores: stores || [] };
         setAuth(authUser, token, refreshToken);
-        setShowChangeModal(false);
+        setModalStep(null);
         toast.success('Password set successfully! Welcome.');
         navigate('/dashboard');
       } else {
@@ -73,6 +91,7 @@ export const LoginPage: React.FC = () => {
   });
 
   const onLogin = (data: LoginForm) => loginMutation.mutate(data);
+  const onOtpSubmit = (data: OtpForm) => otpMutation.mutate(data);
   const onChangePassword = (data: ChangePasswordForm) => changePasswordMutation.mutate(data);
 
   return (
@@ -109,9 +128,46 @@ export const LoginPage: React.FC = () => {
         </Card>
       </div>
 
-      {/* First Login — Change Password Popup */}
+      {/* Step 1: OTP Modal (only when otpEnabled=true) */}
       <Modal
-        isOpen={showChangeModal}
+        isOpen={modalStep === 'otp'}
+        onClose={() => {}}
+        title=""
+        size="sm"
+        showCloseButton={false}
+        closeOnBackdrop={false}
+      >
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-8 h-8 text-primary-600" />
+          </div>
+          <h2 className="text-xl font-bold text-secondary-900">OTP Verification</h2>
+          <p className="text-sm text-secondary-500 mt-2">
+            Your registered mobile/email par OTP bheja gaya hai. Verify karein.
+          </p>
+        </div>
+        <form onSubmit={handleOtp(onOtpSubmit)} className="space-y-4">
+          <Input
+            label="OTP"
+            type="text"
+            maxLength={6}
+            {...regOtp('otp', {
+              required: 'OTP required',
+              pattern: { value: /^\d{6}$/, message: '6-digit OTP enter karein' },
+            })}
+            error={errorsOtp.otp?.message}
+            placeholder="6-digit OTP"
+            autoComplete="one-time-code"
+          />
+          <Button type="submit" className="w-full" loading={otpMutation.isPending}>
+            Verify OTP
+          </Button>
+        </form>
+      </Modal>
+
+      {/* Step 2: Set Password Modal */}
+      <Modal
+        isOpen={modalStep === 'password'}
         onClose={() => {}}
         title=""
         size="sm"
@@ -141,11 +197,8 @@ export const LoginPage: React.FC = () => {
               placeholder="Enter new password"
               autoComplete="new-password"
             />
-            <button
-              type="button"
-              className="absolute right-3 top-8 text-secondary-400"
-              onClick={() => setShowNewPass(!showNewPass)}
-            >
+            <button type="button" className="absolute right-3 top-8 text-secondary-400"
+              onClick={() => setShowNewPass(!showNewPass)}>
               {showNewPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
@@ -162,11 +215,8 @@ export const LoginPage: React.FC = () => {
               placeholder="Confirm new password"
               autoComplete="new-password"
             />
-            <button
-              type="button"
-              className="absolute right-3 top-8 text-secondary-400"
-              onClick={() => setShowConfirmPass(!showConfirmPass)}
-            >
+            <button type="button" className="absolute right-3 top-8 text-secondary-400"
+              onClick={() => setShowConfirmPass(!showConfirmPass)}>
               {showConfirmPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>

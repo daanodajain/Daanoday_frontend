@@ -26,7 +26,7 @@ export const CustomerLoginPage: React.FC = () => {
     queryFn: () => apiService.get('/customer-auth/config'),
     staleTime: 5 * 60 * 1000,
   });
-  const otpEnabled: boolean = configData?.DDMS_data?.otpEnabled ?? true;
+  const otpEnabled: boolean = configData?.DDMS_data?.otpEnabled ?? false;
 
   const {
     register,

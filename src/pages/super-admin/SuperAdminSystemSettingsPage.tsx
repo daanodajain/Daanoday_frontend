@@ -25,7 +25,7 @@ export const SuperAdminSystemSettingsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [selectedSetting, setSelectedSetting] = useState<SystemSetting | null>(null);
-  const [activeCategory, setActiveCategory] = useState('CUSTOMER');
+  const [activeCategory, setActiveCategory] = useState('SECURITY');
 
   const isSuperAdmin = user?.roles?.some(role => role.name === 'SUPER_ADMIN');
 
@@ -65,7 +65,7 @@ export const SuperAdminSystemSettingsPage: React.FC = () => {
   });
 
   const categories = [
-    { key: 'CUSTOMER', label: 'Customer Login', icon: Users },
+    
     { key: 'PAYMENT', label: 'Payment Gateway', icon: CreditCard },
     { key: 'SMS', label: 'SMS Settings', icon: MessageSquare },
     { key: 'EMAIL', label: 'Email Settings', icon: Mail },
@@ -158,11 +158,11 @@ export const SuperAdminSystemSettingsPage: React.FC = () => {
 
         {/* Settings List */}
         <div className="lg:col-span-3">
-          {activeCategory === 'CUSTOMER' && (
-            <CustomerLoginSettings
+          {activeCategory === 'SECURITY' && (
+            <OtpLoginSettings
               settings={settings?.DDMS_data || []}
               onToggle={(key, value) =>
-                createSettingMutation.mutate({ key, value: String(value), category: 'CUSTOMER' })
+                createSettingMutation.mutate({ key, value: String(value), category: 'SECURITY' })
               }
             />
           )}
@@ -254,19 +254,19 @@ export const SuperAdminSystemSettingsPage: React.FC = () => {
   );
 };
 
-const CustomerLoginSettings: React.FC<{
+const OtpLoginSettings: React.FC<{
   settings: SystemSetting[];
   onToggle: (key: string, value: boolean) => void;
 }> = ({ settings, onToggle }) => {
-  const otpSetting = settings.find(s => s.settingKey === 'CUSTOMER_OTP_LOGIN_ENABLED');
-  const otpEnabled = otpSetting ? otpSetting.settingValue === 'true' : true; // default ON
+  const otpSetting = settings.find(s => s.settingKey === 'OTP_LOGIN_ENABLED');
+  const otpEnabled = otpSetting ? otpSetting.settingValue === 'true' : false; // default OFF
 
   return (
     <Card className="mb-6">
       <CardHeader>
         <CardTitle className="flex items-center">
-          <Users className="w-5 h-5 mr-2" />
-          Customer Login Settings
+          <Shield className="w-5 h-5 mr-2" />
+          OTP Login Settings
         </CardTitle>
       </CardHeader>
       <div className="p-6 space-y-5">
@@ -276,12 +276,12 @@ const CustomerLoginSettings: React.FC<{
             <p className="font-medium text-gray-900">OTP Verification on First Login</p>
             <p className="text-sm text-gray-500 mt-1">
               {otpEnabled
-                ? 'ON — Customer ko pehli baar login pe OTP verify karna hoga, phir password set kar sakta hai.'
-                : 'OFF — Customer directly password set kar sakta hai bina OTP ke.'}
+                ? 'ON — Sabhi users (staff, store admin, customer) ko pehli baar login pe OTP verify karna hoga.'
+                : 'OFF — Sabhi users directly password set kar sakte hain bina OTP ke.'}
             </p>
           </div>
           <button
-            onClick={() => onToggle('CUSTOMER_OTP_LOGIN_ENABLED', !otpEnabled)}
+            onClick={() => onToggle('OTP_LOGIN_ENABLED', !otpEnabled)}
             className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none ${
               otpEnabled ? 'bg-blue-600' : 'bg-gray-300'
             }`}
@@ -295,8 +295,8 @@ const CustomerLoginSettings: React.FC<{
         </div>
 
         <div className="text-xs text-gray-400 border-l-2 border-blue-200 pl-3">
-          <strong>OTP ON:</strong> Mobile → OTP verify → Password set → Login<br />
-          <strong>OTP OFF:</strong> Mobile → Password set directly → Login
+          <strong>OTP ON:</strong> First login → OTP verify → Password set → Dashboard<br />
+          <strong>OTP OFF:</strong> First login → Password set directly → Dashboard
         </div>
       </div>
     </Card>
