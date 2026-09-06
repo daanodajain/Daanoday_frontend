@@ -156,16 +156,14 @@ export const ReceiptsPage: React.FC = () => {
 
   const handleOpenEdit = async (receipt: Receipt) => {
     try {
-      // List rows don't include particulars (only the single-receipt fetch
-      // does) — fetch full detail first so the edit form isn't empty.
       const res = await apiService.get(`/receipts/${receipt.id}`);
       const full: Receipt = res.DDMS_data;
       setChangeRequestModal({ receipt: full, action: 'UPDATE' });
       setNewData({ payment_mode: full.payment_mode });
       setEditParticulars(
         (full.particulars || []).map(p => ({
-          particularId: String(p.particular_id),
-          particularName: p.particular_name,
+          particularId: String(p.particular_id || p.id),
+          particularName: p.particular_name || p.name,
           amount: Number(p.amount),
           paidAmount: Number(p.paid_amount ?? p.amount),
         }))

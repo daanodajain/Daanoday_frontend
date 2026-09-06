@@ -101,13 +101,12 @@ class ApiService {
     return response.data;
   }
 
-  async changePassword(newPassword: string) {
+  async changePasswordFirstLogin(newPassword: string) {
     const response = await this.api.post<DDMSResponse>('/auth/change-password', {
       newPassword,
     });
     return response.data;
   }
-
 
   async refreshAuthToken(refreshToken: string) {
     const response = await this.api.post<DDMSResponse>('/auth/refresh', {
@@ -551,6 +550,42 @@ class ApiService {
 
   async getCustomerStats() {
     return await this.get('/customer-profile/stats');
+  }
+
+  async getCustomerTransactions() {
+    return await this.get('/customer-profile/transactions');
+  }
+
+  async getCustomerStoreExpenses() {
+    return await this.get('/customer-profile/store-expenses');
+  }
+
+  async customerSendMobileOtp(mobile: string) {
+    return await this.post('/customer-profile/send-mobile-otp', { mobile });
+  }
+
+  async customerVerifyMobileOtp(mobile: string, otp: string) {
+    return await this.post('/customer-profile/verify-mobile-otp', { mobile, otp });
+  }
+
+  async customerChangePassword(currentPassword: string, newPassword: string) {
+    return await this.post('/customer-profile/change-password', { currentPassword, newPassword });
+  }
+
+  async customerRequestCashPayment(receiptId: string) {
+    return await this.post('/customer-profile/request-cash-payment', { receiptId });
+  }
+
+  async customerCancelCashRequest(receiptId: string) {
+    return await this.delete(`/customer-profile/cancel-cash-request/${receiptId}`);
+  }
+
+  async initiateCustomerOnlinePayment(receiptId: string, amount: number, storeId: string) {
+    return await this.post('/customer-payments/create-order', { receiptId, amount, storeId });
+  }
+
+  async verifyCustomerOnlinePayment(paymentId: string, orderId: string, signature: string, receiptId: string, storeId: string) {
+    return await this.post('/customer-payments/verify', { paymentId, orderId, signature, receiptId, storeId });
   }
 
   // Super Admin — correct endpoints matching backend routes
