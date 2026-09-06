@@ -78,7 +78,7 @@ export const LoginPage: React.FC = () => {
   });
 
   const changePasswordMutation = useMutation({
-    mutationFn: async (data: ChangePasswordForm) => apiService.changePassword(data.newPassword),
+    mutationFn: async (data: ChangePasswordForm) => apiService.changePasswordFirstLogin(data.newPassword),
     onSuccess: (data) => {
       if (data?.status === 'SUCCESS') {
         const { user, token, refreshToken, roles, stores } = data.DDMS_data;
@@ -97,7 +97,13 @@ export const LoginPage: React.FC = () => {
   });
 
   const onLogin = (data: LoginForm) => loginMutation.mutate(data);
-  const onOtpSubmit = (data: OtpForm) => otpMutation.mutate(data);
+  const onOtpSubmit = (data: OtpForm) => {
+    if (!data.otp || data.otp.length !== 6) {
+      toast.error('OTP must be 6 digits');
+      return;
+    }
+    otpMutation.mutate(data);
+  };
   const onChangePassword = (data: ChangePasswordForm) => changePasswordMutation.mutate(data);
 
   return (

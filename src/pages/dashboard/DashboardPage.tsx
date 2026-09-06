@@ -46,7 +46,7 @@ export const DashboardPage: React.FC = () => {
   });
 
   const rejectMutation = useMutation({
-    mutationFn: (id: string) => apiService.rejectReceipt(id),
+    mutationFn: (id: string) => apiService.rejectReceipt(id, 'Rejected from dashboard'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['receipts-pending'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
@@ -67,7 +67,7 @@ export const DashboardPage: React.FC = () => {
     { title: 'Pending Approvals', value: stats?.pendingApprovals || 0, icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-100' },
     { title: 'Pending Changes', value: stats?.pendingChangeRequests || 0, icon: Clock, color: 'text-orange-600', bg: 'bg-orange-100' },
     { title: 'Today Receipts', value: stats?.today?.receipts || 0, icon: FileBarChart, color: 'text-indigo-600', bg: 'bg-indigo-100' },
-    { title: 'Total Challans', value: stats?.total?.challans || 0, icon: FileBarChart, color: 'text-teal-600', bg: 'bg-teal-100' },
+    { title: 'Month Receipts', value: stats?.month?.receipts || 0, icon: FileBarChart, color: 'text-teal-600', bg: 'bg-teal-100' },
   ];
 
   if (!currentStore) {

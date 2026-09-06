@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -18,7 +17,6 @@ type LoginStep = 'identifier' | 'otp' | 'password' | 'setup-password';
 const IDENTIFIER_PATTERN = /^([6-9]\d{9}|[^\s@]+@[^\s@]+\.[^\s@]+)$/;
 
 export const CustomerLoginPage: React.FC = () => {
-  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { setAuth } = useAuthStore();
@@ -27,7 +25,7 @@ export const CustomerLoginPage: React.FC = () => {
   const prefillIdentifier = (location.state as { identifier?: string } | null)?.identifier || '';
   const [identifier, setIdentifier] = useState(prefillIdentifier);
 
-  // Fetch login config (OTP enabled/disabled)
+  // Fetch login config (OTP enabled/disabled) — determines if OTP step is shown
   const { data: configData } = useQuery({
     queryKey: ['customer-login-config'],
     queryFn: () => apiService.get('/customer-auth/config'),

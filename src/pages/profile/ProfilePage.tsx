@@ -11,7 +11,7 @@ import { useAuthStore } from '@/store/authStore';
 
 export const ProfilePage: React.FC = () => {
   const queryClient = useQueryClient();
-  const { user: currentUser, setAuth, token, refreshToken } = useAuthStore();
+  const { user: currentUser } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'profile' | 'password'>('profile');
 
   const { data, isLoading } = useQuery({
@@ -124,14 +124,14 @@ export const ProfilePage: React.FC = () => {
             <Input
               label="Full Name *"
               {...regProfile('name', { required: 'Name is required' })}
-              error={profileErrors.name?.message}
+              error={profileErrors.name?.message as string}
               placeholder="Your full name"
             />
             <Input
               label="Email"
               type="email"
               {...regProfile('email')}
-              error={profileErrors.email?.message}
+              error={profileErrors.email?.message as string}
               placeholder="your@email.com"
             />
             <Input
@@ -140,7 +140,7 @@ export const ProfilePage: React.FC = () => {
               {...regProfile('mobile', {
                 pattern: { value: /^\d{10}$/, message: 'Must be 10 digits' }
               })}
-              error={profileErrors.mobile?.message}
+              error={profileErrors.mobile?.message as string}
               placeholder="10-digit mobile number"
               maxLength={10}
               onChange={(e) => {
@@ -165,7 +165,7 @@ export const ProfilePage: React.FC = () => {
               label="Current Password *"
               type="password"
               {...regPass('currentPassword', { required: 'Current password is required' })}
-              error={passErrors.currentPassword?.message}
+              error={passErrors.currentPassword?.message as string | undefined}
               placeholder="Enter current password"
             />
             <Input
@@ -175,7 +175,7 @@ export const ProfilePage: React.FC = () => {
                 required: 'New password is required',
                 minLength: { value: 6, message: 'Minimum 6 characters' },
               })}
-              error={passErrors.newPassword?.message}
+              error={passErrors.newPassword?.message as string | undefined}
               placeholder="Enter new password"
             />
             <Input
@@ -185,7 +185,7 @@ export const ProfilePage: React.FC = () => {
                 required: 'Please confirm password',
                 validate: (val) => val === watch('newPassword') || 'Passwords do not match',
               })}
-              error={passErrors.confirmPassword?.message}
+              error={passErrors.confirmPassword?.message as string | undefined}
               placeholder="Confirm new password"
             />
             <div className="flex justify-end pt-2">

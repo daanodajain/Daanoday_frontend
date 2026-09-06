@@ -48,7 +48,15 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   };
 
   const handleSuperAdminStoreSelect = async (store: any) => {
-    await setCurrentStore({ id: store.id, name: store.name, subscription_status: store.subscription_status });
+    await setCurrentStore({
+      id: store.id,
+      name: store.name,
+      subscription_status: store.subscriptionStatus || store.subscription_status,
+      store_admin_id: store.store_admin_id || null,
+      online_payment_enabled: store.onlinePaymentEnabled ?? store.online_payment_enabled ?? false,
+      active: store.active ?? true,
+      created_at: store.created_at || new Date().toISOString(),
+    });
     setShowSuperAdminStoreDropdown(false);
   };
 
