@@ -53,7 +53,16 @@ class ApiService {
 
         if (error.response?.status === 401) {
           const { refreshToken, isAuthenticated } = useAuthStore.getState();
-          if (!isAuthenticated || !refreshToken) {
+
+          // Not an existing session (e.g. a plain login/OTP attempt just
+          // failed) — there's nothing to refresh or log out of. Hard-
+          // redirecting here wipes the login page before it can show the
+          // error or route to the OTP-setup flow. Let the caller handle it.
+          if (!isAuthenticated) {
+            return Promise.reject(error);
+          }
+
+          if (!refreshToken) {
             useAuthStore.getState().logout();
             return Promise.reject(error);
           }

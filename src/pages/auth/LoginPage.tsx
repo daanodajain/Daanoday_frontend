@@ -54,7 +54,7 @@ export const LoginPage: React.FC = () => {
     onError: (error: any, variables) => {
       const code = error?.response?.data?.DDMS_error_code || error?.message;
       if (code === 'CUSTOMER_FIRST_LOGIN_SETUP_REQUIRED') {
-        toast('Pehli baar login? OTP se apna account set up karein.', { icon: 'ℹ️' });
+        toast('First time logging in? Set up your account with OTP.', { icon: 'ℹ️' });
         navigate('/customer/login', { state: { identifier: variables?.identifier } });
         return;
       }
@@ -106,7 +106,7 @@ export const LoginPage: React.FC = () => {
         <div className="text-center">
           <h1 className="text-3xl font-bold text-primary-600 mb-2">Daanoday</h1>
           <h2 className="text-xl font-semibold text-secondary-900">Login</h2>
-          <p className="mt-2 text-sm text-secondary-600">Staff aur Customer, dono yahin se login karein</p>
+          <p className="mt-2 text-sm text-secondary-600">Temple Donation Management System</p>
         </div>
 
         <Card className="p-8">
@@ -137,7 +137,7 @@ export const LoginPage: React.FC = () => {
               onClick={() => navigate('/customer/login')}
               className="text-sm text-primary-600 hover:text-primary-500"
             >
-              Pehli baar customer login (OTP se account set up karein)
+              First-time customer? Set up your account with OTP
             </button>
           </div>
         </Card>
