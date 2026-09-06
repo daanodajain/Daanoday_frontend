@@ -430,8 +430,8 @@ class ApiService {
   }
 
   // Receipt Approval
-  async rejectReceipt(receiptId: string) {
-    return await this.post(`/receipts/${receiptId}/reject`);
+  async rejectReceipt(receiptId: string, reason?: string) {
+    return await this.post(`/receipts/${receiptId}/reject`, { reason });
   }
 
   async getPendingApprovals() {

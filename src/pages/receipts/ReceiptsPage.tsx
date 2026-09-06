@@ -33,10 +33,14 @@ export const ReceiptsPage: React.FC = () => {
   const [editParticulars, setEditParticulars] = useState<{ particularId: string; particularName: string; amount: number; paidAmount: number }[]>([]);
   const [collectModal, setCollectModal] = useState<Receipt | null>(null);
   const [collectPaymentMode, setCollectPaymentMode] = useState('CASH');
+  const [markPaidModal, setMarkPaidModal] = useState<Receipt | null>(null);
+  const [markPaidMode, setMarkPaidMode] = useState('CASH');
+  const [rejectModal, setRejectModal] = useState<Receipt | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: ['receipts', searchTerm],
-    queryFn: () => apiService.getReceipts({ search: searchTerm }),
+    queryFn: () => apiService.getReceipts(searchTerm ? { search: searchTerm } : {}),
   });
 
   const { data: particularsList } = useQuery({
@@ -63,9 +67,25 @@ export const ReceiptsPage: React.FC = () => {
   });
 
   const rejectMutation = useMutation({
-    mutationFn: (id: string) => apiService.rejectReceipt(id),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['receipts'] }); toast.success('Receipt rejected'); },
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => apiService.rejectReceipt(id, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['receipts'] });
+      toast.success('Receipt rejected');
+      setRejectModal(null);
+      setRejectReason('');
+    },
     onError: (e: any) => toast.error(e.message || 'Failed to reject'),
+  });
+
+  const markPaidMutation = useMutation({
+    mutationFn: ({ id, paymentMode }: { id: string; paymentMode: string }) =>
+      apiService.post(`/receipts/${id}/pay`, { paymentMode }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['receipts'] });
+      toast.success('Receipt marked as paid (or sent for approval)');
+      setMarkPaidModal(null);
+    },
+    onError: (e: any) => toast.error(e?.response?.data?.DDMS_error_code || e.message || 'Failed to mark as paid'),
   });
 
   const handleDownloadPdf = async (receipt: Receipt) => {
@@ -232,12 +252,20 @@ export const ReceiptsPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="table-cell">
-                      {receipt.payment_mode}
-                      {receipt.status === 'PARTIAL' && (
-                        <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium text-amber-700 bg-amber-100">
-                          PARTIAL — ₹{(Number(receipt.total_amount) - Number(receipt.paid_amount || 0)).toLocaleString()} due
-                        </span>
-                      )}
+                      <div className="flex flex-col gap-1">
+                        {receipt.payment_mode && <span className="text-xs text-secondary-500">{receipt.payment_mode}</span>}
+                        {receipt.status === 'PAID' && (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium text-green-700 bg-green-100 w-fit">PAID</span>
+                        )}
+                        {receipt.status === 'PARTIAL' && (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium text-amber-700 bg-amber-100 w-fit">
+                            PARTIAL — ₹{(Number(receipt.total_amount) - Number(receipt.paid_amount || 0)).toLocaleString()} due
+                          </span>
+                        )}
+                        {receipt.status === 'UNPAID' && receipt.receipt_state !== 'PENDING_APPROVAL' && (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium text-red-700 bg-red-100 w-fit">UNPAID (Due)</span>
+                        )}
+                      </div>
                     </td>
                     <td className="table-cell">
                       <div className="flex space-x-1">
@@ -247,7 +275,13 @@ export const ReceiptsPage: React.FC = () => {
                         <Button variant="ghost" size="sm" title="Download PDF" onClick={() => handleDownloadPdf(receipt)}>
                           <Download className="w-4 h-4" />
                         </Button>
-                        {receipt.status === 'PARTIAL' && canApprove('receipts') && (
+                        {receipt.status === 'UNPAID' && receipt.receipt_state === 'APPROVED' && canApprove('receipts') && (
+                          <Button variant="ghost" size="sm" className="text-green-700" title="Mark as Paid"
+                            onClick={() => { setMarkPaidModal(receipt); setMarkPaidMode('CASH'); }}>
+                            <span className="text-xs font-medium px-1">Pay</span>
+                          </Button>
+                        )}
+                        {receipt.status === 'PARTIAL' && receipt.receipt_state === 'APPROVED' && canApprove('receipts') && (
                           <Button variant="ghost" size="sm" className="text-amber-600" title="Collect Remaining"
                             onClick={() => { setCollectModal(receipt); setCollectPaymentMode(receipt.payment_mode || 'CASH'); }}>
                             <span className="text-xs font-medium px-1">Collect</span>
@@ -261,7 +295,7 @@ export const ReceiptsPage: React.FC = () => {
                               <Check className="w-4 h-4" />
                             </Button>
                             <Button variant="ghost" size="sm" className="text-red-600" title="Reject"
-                              onClick={() => rejectMutation.mutate(receipt.id)}
+                              onClick={() => { setRejectModal(receipt); setRejectReason(''); }}
                               disabled={rejectMutation.isPending}>
                               <X className="w-4 h-4" />
                             </Button>
@@ -290,6 +324,70 @@ export const ReceiptsPage: React.FC = () => {
       </Card>
 
       <CreateReceiptModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} />
+
+      {/* Mark as Paid Modal */}
+      <Modal isOpen={!!markPaidModal} onClose={() => setMarkPaidModal(null)} title="Mark Receipt as Paid">
+        {markPaidModal && (
+          <div className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-800">
+              Receipt <strong>{markPaidModal.receipt_number}</strong> — Total: ₹{Number(markPaidModal.total_amount).toLocaleString()}
+            </div>
+            <div>
+              <label className="form-label">Payment Mode *</label>
+              <select className="form-input" value={markPaidMode} onChange={(e) => setMarkPaidMode(e.target.value)}>
+                <option value="CASH">Cash</option>
+                <option value="CHEQUE">Cheque</option>
+                <option value="ONLINE">Online</option>
+              </select>
+            </div>
+            {markPaidMode === 'CASH' && (
+              <p className="text-xs text-amber-700 bg-amber-50 rounded p-2">
+                If this amount exceeds the store's cash approval limit, it will be sent for admin approval.
+              </p>
+            )}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setMarkPaidModal(null)}>Cancel</Button>
+              <Button
+                onClick={() => markPaidMutation.mutate({ id: String(markPaidModal.id), paymentMode: markPaidMode })}
+                disabled={markPaidMutation.isPending}>
+                {markPaidMutation.isPending ? 'Processing...' : 'Mark as Paid'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Reject with Reason Modal */}
+      <Modal isOpen={!!rejectModal} onClose={() => { setRejectModal(null); setRejectReason(''); }} title="Reject Receipt">
+        {rejectModal && (
+          <div className="space-y-4">
+            <div className="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-800">
+              Rejecting receipt <strong>{rejectModal.receipt_number}</strong> — ₹{Number(rejectModal.total_amount).toLocaleString()}
+            </div>
+            <div>
+              <label className="form-label">Rejection Reason *</label>
+              <textarea
+                className="input w-full h-20 resize-none"
+                placeholder="Enter reason for rejection..."
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => { setRejectModal(null); setRejectReason(''); }}>Cancel</Button>
+              <Button
+                className="bg-red-600 hover:bg-red-700 text-white"
+                onClick={() => {
+                  if (!rejectReason.trim()) { toast.error('Rejection reason is required'); return; }
+                  rejectMutation.mutate({ id: String(rejectModal.id), reason: rejectReason });
+                }}
+                disabled={rejectMutation.isPending}>
+                {rejectMutation.isPending ? 'Rejecting...' : 'Confirm Reject'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* Collect Remaining Modal */}
       <Modal isOpen={!!collectModal} onClose={() => setCollectModal(null)} title="Collect Remaining Amount">
