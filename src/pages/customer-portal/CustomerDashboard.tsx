@@ -66,7 +66,7 @@ export const CustomerDashboard: React.FC = () => {
 
   const downloadReceipt = async (receiptId: string, receiptNumber: string) => {
     try {
-      const blob = await apiService.generateReceiptPDF(receiptId);
+      const blob = await apiService.getCustomerReceiptPdf(receiptId);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url; a.download = `${receiptNumber}.pdf`;
@@ -81,7 +81,7 @@ export const CustomerDashboard: React.FC = () => {
 
   const handleCashRequest = async () => {
     try {
-      await apiService.customerRequestCashPayment(payment.receiptId);
+      await apiService.customerRequestCashPayment(payment.receiptId, payment.dueAmount, payment.storeId);
       setCashPendingIds(prev => new Set([...prev, payment.receiptId]));
       toast.success('Cash payment request sent to store admin!');
       setPayment(INIT_PAYMENT);
@@ -101,7 +101,7 @@ export const CustomerDashboard: React.FC = () => {
 
   const handleOnlinePayment = async () => {
     try {
-      const res = await apiService.initiateCustomerOnlinePayment(payment.receiptId, payment.dueAmount, payment.storeId);
+      const res = await apiService.initiateCustomerOnlinePayment(payment.receiptId, payment.storeId);
       const { orderId, keyId, amount } = res?.DDMS_data || {};
       if (!orderId) { toast.error('Payment gateway not configured'); return; }
 
@@ -278,7 +278,12 @@ export const CustomerDashboard: React.FC = () => {
                 : receipts.map(r => {
                   const due = Number(r.total_amount) - Number(r.paid_amount || 0);
                   const canPay = r.receipt_state === 'APPROVED' && r.status !== 'PAID';
-                  const cashPending = cashPendingIds.has(r.id);
+                  // Derive from the receipt's own state, not just the local
+                  // Set — that Set only remembers requests made *this*
+                  // session, so a page refresh (or a PENDING_APPROVAL that
+                  // originated some other way) would otherwise show no
+                  // "pending" indicator at all instead of the real status.
+                  const cashPending = r.receipt_state === 'PENDING_APPROVAL' || cashPendingIds.has(r.id);
                   return (
                     <div key={r.id} className="py-3 border-b last:border-0">
                       <div className="flex items-start justify-between gap-2">

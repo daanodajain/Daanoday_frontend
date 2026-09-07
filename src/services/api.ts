@@ -572,20 +572,30 @@ class ApiService {
     return await this.post('/customer-profile/change-password', { currentPassword, newPassword });
   }
 
+  // Dedicated customer-portal PDF download — the staff route (/receipts/:id/pdf)
+  // needs an x-store-id header and a staff JWT with role/permission checks,
+  // neither of which a customer session has, so it fails for customers.
+  async getCustomerReceiptPdf(receiptId: string) {
+    const response = await this.api.get(`/customer-profile/receipts/${receiptId}/pdf`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  }
+
   async customerRequestCashPayment(receiptId: string, amount: number, storeId: string) {
     return await this.post('/customer-payments/request-cash-payment', { receiptId, amount, storeId });
   }
 
   async customerCancelCashRequest(receiptId: string) {
-    return await this.delete(`/customer-profile/cancel-cash-request/${receiptId}`);
+    return await this.delete(`/customer-payments/cancel-cash-request/${receiptId}`);
   }
 
-  async initiateCustomerOnlinePayment(receiptId: string, amount: number, storeId: string) {
-    return await this.post('/customer-payments/create-order', { receiptId, amount, storeId });
+  async initiateCustomerOnlinePayment(receiptId: string, storeId: string) {
+    return await this.post('/customer-payments/pay-online', { receiptId, storeId });
   }
 
   async verifyCustomerOnlinePayment(paymentId: string, orderId: string, signature: string, receiptId: string, storeId: string) {
-    return await this.post('/customer-payments/verify', { paymentId, orderId, signature, receiptId, storeId });
+    return await this.post('/customer-payments/verify-online', { paymentId, orderId, signature, receiptId, storeId });
   }
 
   // Super Admin — correct endpoints matching backend routes
