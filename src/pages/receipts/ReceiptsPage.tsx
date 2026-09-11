@@ -163,7 +163,7 @@ export const ReceiptsPage: React.FC = () => {
       setEditParticulars(
         (full.particulars || []).map(p => ({
           particularId: String(p.particular_id || p.id),
-          particularName: p.particular_name || p.name,
+          particularName: p.particular_name,
           amount: Number(p.amount),
           paidAmount: Number(p.paid_amount ?? p.amount),
         }))
